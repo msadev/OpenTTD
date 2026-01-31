@@ -5,6 +5,11 @@ Module['websocket'] = { url: function(host, port, proto) {
         return "wss://bananas-server.openttd.org/";
     }
 
+    /* Check if a local WebSocket proxy is configured. */
+    if (window.openttd_websocket_proxy) {
+        return window.openttd_websocket_proxy + '/connect/' + host + '/' + port;
+    }
+
     /* Everything else just tries to make a default WebSocket connection.
      * If you run your own server you can setup your own WebSocket proxy in
      * front of it and let people connect to your server via the proxy. You
@@ -82,6 +87,18 @@ Module.preRun.push(function() {
          *  add_server("127.0.0.1:3979");
          *  add_server("[::1]:3979");
          */
+
+        /* Use pre-fetched server list if available */
+        if (window._openttd_cached_servers) {
+            /* Filter out invite codes (starting with +) as they require Game Coordinator */
+            var directServers = window._openttd_cached_servers.filter(function(server) {
+                return !server.connection_string.startsWith('+');
+            });
+            console.log('[OpenTTD] Adding ' + directServers.length + ' direct servers (filtered from ' + window._openttd_cached_servers.length + ')');
+            directServers.forEach(function(server) {
+                add_server(server.connection_string);
+            });
+        }
     }
 
     var leftButtonDown = false;
