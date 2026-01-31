@@ -4,7 +4,7 @@
   "description": "OpenTTD Web Port - Transport Tycoon Deluxe clone in your browser",
   "type": "module",
   "scripts": {
-    "dev": "parcel serve src/index.html --port 3000 --open",
+    "dev": "parcel serve src/index.html --port 3000",
     "build": "parcel build src/index.html --dist-dir dist --public-url ./",
     "build:wasm": "node scripts/build-wasm.js",
     "build:all": "npm run build:wasm && npm run build",

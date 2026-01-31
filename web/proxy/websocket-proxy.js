@@ -25,7 +25,7 @@ import { fetchServerList } from './game-coordinator.js';
 const PROXY_PORT = parseInt(process.argv[2]) || 8080;
 
 // Security: List of allowed ports (OpenTTD default ports)
-const ALLOWED_PORTS = [3979, 3978]; // Game server, content server
+const ALLOWED_PORTS = [3975, 3976, 3978, 3979, 3986, 3987]; // Game server, content server
 
 // Security: Optional allowlist of servers (empty = allow all)
 const ALLOWED_SERVERS = [
