@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="OpenTTD - Open source transport simulation game in your browser">
+  <meta name="theme-color" content="#1a5f2a">
+
+  <title>OpenTTD Web</title>
+
+  <link rel="stylesheet" href="./styles/main.css">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+  <div id="app">
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen active">
+      <div class="loading-container">
+        <div class="logo">
+          <h1>OpenTTD</h1>
+          <p class="subtitle">Transport Tycoon Deluxe</p>
+        </div>
+
+        <div class="progress-container">
+          <div class="progress-bar">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+          <p id="loading-status" class="loading-status">Initializing...</p>
+        </div>
+
+        <div id="loading-details" class="loading-details"></div>
+      </div>
+    </div>
+
+    <!-- Audio Unlock Screen (required by browsers) -->
+    <div id="audio-unlock-screen" class="screen">
+      <div class="unlock-container">
+        <h2>Ready to Play!</h2>
+        <p>Click anywhere to enable audio and start the game</p>
+        <button id="start-button" class="start-button">
+          Start Game
+        </button>
+      </div>
+    </div>
+
+    <!-- Error Screen -->
+    <div id="error-screen" class="screen">
+      <div class="error-container">
+        <h2 id="error-title">Error</h2>
+        <p id="error-message"></p>
+        <button id="reload-button" class="reload-button" onclick="location.reload()">
+          Reload Page
+        </button>
+      </div>
+    </div>
+
+    <!-- Game Canvas -->
+    <canvas id="canvas" tabindex="0"></canvas>
+
+    <!-- Overlay UI -->
+    <div id="overlay" class="overlay hidden">
+      <div id="notification" class="notification hidden"></div>
+    </div>
+
+    <!-- Fullscreen Button -->
+    <button id="fullscreen-button" class="fullscreen-button hidden" title="Toggle Fullscreen">
+      <svg viewBox="0 0 24 24" width="24" height="24">
+        <path fill="currentColor" d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+      </svg>
+    </button>
+  </div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

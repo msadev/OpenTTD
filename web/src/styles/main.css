@@ -1,0 +1,337 @@
+/* OpenTTD Web - Main Styles */
+
+:root {
+  --color-primary: #1a5f2a;
+  --color-primary-dark: #0d3015;
+  --color-secondary: #4a90d9;
+  --color-background: #1a1a2e;
+  --color-surface: #2a2a4a;
+  --color-text: #ffffff;
+  --color-text-muted: #a0a0b0;
+  --color-error: #d9534f;
+  --color-warning: #f0ad4e;
+  --color-success: #5cb85c;
+
+  --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --border-radius: 8px;
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-family);
+  background-color: var(--color-background);
+  color: var(--color-text);
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* Screens */
+.screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, var(--color-background) 0%, var(--color-primary-dark) 100%);
+  z-index: 100;
+}
+
+.screen.active {
+  display: flex;
+}
+
+/* Loading Screen */
+.loading-container {
+  text-align: center;
+  max-width: 500px;
+  padding: 2rem;
+}
+
+.logo h1 {
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  margin-bottom: 0.5rem;
+}
+
+.logo .subtitle {
+  font-size: 1.2rem;
+  color: var(--color-text-muted);
+  margin-bottom: 2rem;
+}
+
+.progress-container {
+  margin: 2rem 0;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 24px;
+  background-color: var(--color-surface);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  border: 2px solid var(--color-primary);
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-success) 100%);
+  transition: width var(--transition-normal);
+}
+
+.loading-status {
+  margin-top: 1rem;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.loading-details {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}
+
+/* Audio Unlock Screen */
+.unlock-container {
+  text-align: center;
+  padding: 2rem;
+}
+
+.unlock-container h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: var(--color-success);
+}
+
+.unlock-container p {
+  color: var(--color-text-muted);
+  margin-bottom: 2rem;
+}
+
+.start-button {
+  padding: 1rem 3rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-text);
+  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  border: 3px solid var(--color-success);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.start-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(92, 184, 92, 0.5);
+}
+
+.start-button:active {
+  transform: scale(0.98);
+}
+
+/* Error Screen */
+.error-container {
+  text-align: center;
+  padding: 2rem;
+  max-width: 500px;
+}
+
+.error-container h2 {
+  font-size: 2rem;
+  color: var(--color-error);
+  margin-bottom: 1rem;
+}
+
+.error-container p {
+  color: var(--color-text-muted);
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.reload-button {
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  color: var(--color-text);
+  background-color: var(--color-error);
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.reload-button:hover {
+  background-color: #c9302c;
+}
+
+/* Game Canvas */
+#canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  /* OpenTTD draws its own cursor */
+  cursor: none !important;
+  outline: none;
+}
+
+/* Overlay */
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+/* Notification */
+.notification {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.75rem 1.5rem;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--border-radius);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  pointer-events: auto;
+  transition: opacity var(--transition-normal);
+}
+
+.notification.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.notification.warning {
+  border-color: var(--color-warning);
+  background-color: rgba(240, 173, 78, 0.2);
+}
+
+.notification.error {
+  border-color: var(--color-error);
+  background-color: rgba(217, 83, 79, 0.2);
+}
+
+/* Fullscreen Button */
+.fullscreen-button {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  padding: 12px;
+  background-color: rgba(0, 0, 0, 0.5);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--border-radius);
+  color: var(--color-text);
+  cursor: pointer;
+  z-index: 60;
+  transition: all var(--transition-fast);
+}
+
+.fullscreen-button:hover {
+  background-color: var(--color-primary);
+}
+
+.fullscreen-button.hidden {
+  display: none;
+}
+
+/* Utility classes */
+.hidden {
+  display: none !important;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .logo h1 {
+    font-size: 2.5rem;
+  }
+
+  .logo .subtitle {
+    font-size: 1rem;
+  }
+
+  .start-button {
+    padding: 0.75rem 2rem;
+    font-size: 1.2rem;
+  }
+
+  .fullscreen-button {
+    bottom: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+    padding: 8px;
+  }
+}
+
+/* Touch device optimization */
+@media (hover: none) and (pointer: coarse) {
+  #canvas {
+    cursor: default !important;
+  }
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.loading-status {
+  animation: pulse 2s infinite;
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  :root {
+    --color-primary: #00ff00;
+    --color-text: #ffffff;
+    --color-background: #000000;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
