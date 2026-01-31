@@ -22,7 +22,7 @@ export function createModule(config) {
 
   const Module = {
     canvas,
-    arguments: ['-mnull', '-snull', '-vsdl'],
+    arguments: ['-memscripten', '-vsdl'],
     preRun: [],
     postRun: [],
 

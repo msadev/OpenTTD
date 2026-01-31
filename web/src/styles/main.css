@@ -259,6 +259,9 @@ html, body {
   cursor: pointer;
   z-index: 60;
   transition: all var(--transition-fast);
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
 .fullscreen-button:hover {

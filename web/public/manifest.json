@@ -1,7 +1,7 @@
 {
   "name": "OpenTTD Web",
   "short_name": "OpenTTD",
-  "description": "Transport Tycoon Deluxe clone in your browser",
+  "description": "Open Transport Tycoon Deluxe in your browser",
   "start_url": "/",
   "display": "fullscreen",
   "orientation": "landscape",

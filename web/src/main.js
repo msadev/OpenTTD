@@ -4,6 +4,7 @@
 
 import { createModule, initFileSystem, setupWebSocket, setupGlobalFunctions, patchSocketFS } from './lib/emscripten-module.js';
 import { audioManager } from './lib/audio-manager.js';
+import { setupMusicGlobals } from './lib/midi-player.js';
 
 // WASM assets are served from /static folder via parcel-reporter-static-files-copy
 const openttdJsUrl = '/openttd.js';
@@ -143,6 +144,9 @@ async function initModule() {
 
   // Initialize audio early
   audioManager.init();
+
+  // Setup MIDI music player globals
+  setupMusicGlobals();
 
   return Module;
 }

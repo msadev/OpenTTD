@@ -38,6 +38,12 @@ if(NOT OPTION_DEDICATED)
     )
 
     add_files(
+        emscripten_m.cpp
+        emscripten_m.h
+        CONDITION EMSCRIPTEN
+    )
+
+    add_files(
         midi.h
         midifile.cpp
         midifile.hpp
