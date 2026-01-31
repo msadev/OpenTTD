@@ -1,15 +1,20 @@
-# OpenTTD
+# OpenTTD Web
+
+**Play OpenTTD directly in your browser!**
+
+This is a WebAssembly port of OpenTTD, the open-source transport simulation game. No installation required - just open and play.
 
 ## Table of contents
 
 - 1.0) [About](#10-about)
-    - 1.1) [Downloading OpenTTD](#11-downloading-openttd)
-    - 1.2) [OpenTTD gameplay manual](#12-openttd-gameplay-manual)
-    - 1.3) [Supported platforms](#13-supported-platforms)
-    - 1.4) [Installing and running OpenTTD](#14-installing-and-running-openttd)
-    - 1.5) [Add-on content / mods](#15-add-on-content--mods)
-    - 1.6) [OpenTTD directories](#16-openttd-directories)
-    - 1.7) [Compiling OpenTTD](#17-compiling-openttd)
+    - 1.1) [Playing in Browser](#11-playing-in-browser)
+    - 1.2) [Downloading OpenTTD](#12-downloading-openttd)
+    - 1.3) [OpenTTD gameplay manual](#13-openttd-gameplay-manual)
+    - 1.4) [Supported platforms](#14-supported-platforms)
+    - 1.5) [Installing and running OpenTTD](#15-installing-and-running-openttd)
+    - 1.6) [Add-on content / mods](#16-add-on-content--mods)
+    - 1.7) [OpenTTD directories](#17-openttd-directories)
+    - 1.8) [Compiling OpenTTD](#18-compiling-openttd)
 - 2.0) [Contact and community](#20-contact-and-community)
     - 2.1) [Multiplayer games](#21-multiplayer-games)
     - 2.2) [Contributing to OpenTTD](#22-contributing-to-openttd)
@@ -26,7 +31,42 @@ It attempts to mimic the original game as closely as possible while extending it
 OpenTTD is licensed under the GNU General Public License version 2.0, but includes some 3rd party software under different licenses.
 See the section ["Licensing"](#30-licensing) below for details.
 
-## 1.1) Downloading OpenTTD
+## 1.1) Playing in Browser
+
+This web port allows you to play OpenTTD directly in your browser using WebAssembly technology.
+
+### Features
+- Full OpenTTD gameplay in your browser
+- Sound effects via SDL2 audio
+- MIDI music playback via software synthesizer
+- Persistent saves using browser IndexedDB
+- Multiplayer via WebSocket proxy
+- Download content (NewGRFs) from BaNaNaS
+
+### Browser Requirements
+- Modern browser with WebAssembly support (Chrome, Firefox, Safari, Edge)
+- WebGL support for graphics
+- ~50MB download for initial load
+
+### Building the Web Version
+
+```bash
+# Install Emscripten SDK first
+# https://emscripten.org/docs/getting_started/downloads.html
+
+# Build the WASM module
+cd web
+npm install
+npm run build:wasm
+
+# Build the web frontend
+npm run build
+
+# Preview locally
+npm run preview
+```
+
+## 1.2) Downloading OpenTTD (Desktop Version)
 
 OpenTTD can be downloaded from the [official OpenTTD website](https://www.openttd.org/).
 
@@ -37,23 +77,24 @@ Both 'stable' and 'nightly' versions are available for download:
 
 OpenTTD is also available for free on [Steam](https://store.steampowered.com/app/1536610/OpenTTD/), [GOG.com](https://www.gog.com/game/openttd), and the [Microsoft Store](https://www.microsoft.com/p/openttd-official/9ncjg5rvrr1c). On some platforms OpenTTD will be available via your OS package manager or a similar service.
 
-## 1.2) OpenTTD gameplay manual
+## 1.3) OpenTTD gameplay manual
 
 OpenTTD has a [community-maintained wiki](https://wiki.openttd.org/), including a gameplay manual and tips.
 
-## 1.3) Supported platforms
+## 1.4) Supported platforms
 
 OpenTTD has been ported to several platforms and operating systems.
 
 The currently supported platforms are:
 
+- **Web Browser** (WebAssembly + WebGL) - Chrome, Firefox, Safari, Edge
 - Linux (SDL (OpenGL and non-OpenGL))
 - macOS (universal) (Cocoa)
 - Windows (Win32 GDI / OpenGL)
 
 Other platforms may also work (in particular various BSD systems), but we don't actively test or maintain these.
 
-### 1.3.1) Legacy support
+### 1.4.1) Legacy support
 
 Platforms, languages and compilers change.
 We'll keep support going on old platforms as long as someone is interested in supporting them, except where it means the project can't move forward to keep up with language and compiler features.
@@ -61,7 +102,7 @@ We'll keep support going on old platforms as long as someone is interested in su
 We guarantee that every revision of OpenTTD will be able to load savegames from every older revision (excepting where the savegame is corrupt).
 Please report a bug if you find a save that doesn't load.
 
-## 1.4) Installing and running OpenTTD
+## 1.5) Installing and running OpenTTD
 
 OpenTTD is usually straightforward to install, but for more help the wiki [includes an installation guide](https://wiki.openttd.org/en/Manual/Installation).
 
@@ -71,7 +112,7 @@ For some platforms these will be downloaded during the installation process if r
 
 For some platforms, you will need to refer to [the installation guide](https://wiki.openttd.org/en/Manual/Installation).
 
-### 1.4.1) Free graphics and sound files
+### 1.5.1) Free graphics and sound files
 
 The free data files, split into OpenGFX for graphics, OpenSFX for sounds and
 OpenMSX for music can be found at:
@@ -83,7 +124,7 @@ OpenMSX for music can be found at:
 Please follow the readme of these packages about the installation procedure.
 The Windows installer can optionally download and install these packages.
 
-### 1.4.2) Original Transport Tycoon Deluxe graphics and sound files
+### 1.5.2) Original Transport Tycoon Deluxe graphics and sound files
 
 If you want to play with the original Transport Tycoon Deluxe data files you have to copy the data files from the CD-ROM into the baseset/ directory.
 It does not matter whether you copy them from the DOS or Windows version of Transport Tycoon Deluxe.
@@ -97,14 +138,14 @@ You need to copy the following files:
 - trgir.grf or TRGI.GRF
 - trgtr.grf or TRGT.GRF
 
-### 1.4.3) Original Transport Tycoon Deluxe music
+### 1.5.3) Original Transport Tycoon Deluxe music
 
 If you want the Transport Tycoon Deluxe music, copy the appropriate files from the original game into the baseset folder.
 - TTD for Windows: All files in the gm/ folder (gm_tt00.gm up to gm_tt21.gm)
 - TTD for DOS: The GM.CAT file
 - Transport Tycoon Original: The GM.CAT file, but rename it to GM-TTO.CAT
 
-## 1.5) Add-on content / mods
+## 1.6) Add-on content / mods
 
 OpenTTD features multiple types of add-on content, which modify gameplay in different ways.
 
@@ -112,7 +153,7 @@ Most types of add-on content can be downloaded within OpenTTD via the 'Check Onl
 
 Add-on content can also be installed manually, but that's more complicated; the [OpenTTD wiki](https://wiki.openttd.org/) may offer help with that, or the [OpenTTD directory structure guide](./docs/directory_structure.md).
 
-### 1.5.1) Social Integration
+### 1.6.1) Social Integration
 
 OpenTTD has the ability to load plugins to integrate with Social Platforms like Steam, Discord, etc.
 
@@ -120,13 +161,13 @@ To enable such integration, the plugin for the specific platform has to be downl
 
 See [OpenTTD's website](https://www.openttd.org), under Downloads, for what plugins are available.
 
-### 1.6) OpenTTD directories
+### 1.7) OpenTTD directories
 
 OpenTTD uses its own directory structure to store game data, add-on content etc.
 
 For more information, see the [directory structure guide](./docs/directory_structure.md).
 
-### 1.7) Compiling OpenTTD
+### 1.8) Compiling OpenTTD
 
 If you want to compile OpenTTD from source, instructions can be found in [COMPILING.md](./COMPILING.md).
 
