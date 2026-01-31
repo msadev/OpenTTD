@@ -98,17 +98,7 @@ export async function playMidiFile(filename) {
  * Stop MIDI playback
  */
 export function stopMidiPlayback() {
-  if (currentPlayer) {
-    try {
-      currentPlayer.stop();
-      currentPlayer.disconnect();
-    } catch (e) {
-      // Ignore errors when stopping
-    }
-    currentPlayer = null;
-  }
-
-  // Send all notes off to all channels
+  // Send all notes off to all channels first
   if (midiOut) {
     for (let ch = 0; ch < 16; ch++) {
       try {
@@ -118,6 +108,24 @@ export function stopMidiPlayback() {
         // Ignore
       }
     }
+  }
+
+  if (currentPlayer) {
+    try {
+      currentPlayer.stop();
+    } catch (e) {
+      // Ignore errors when stopping
+    }
+    // Delay disconnect to avoid AudioNode errors from JZZ.synth.Tiny
+    const player = currentPlayer;
+    currentPlayer = null;
+    setTimeout(() => {
+      try {
+        player.disconnect();
+      } catch (e) {
+        // Ignore - node may already be disconnected
+      }
+    }, 100);
   }
 
   isPlaying = false;

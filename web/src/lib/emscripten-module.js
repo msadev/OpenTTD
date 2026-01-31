@@ -31,6 +31,8 @@ export function createModule(config) {
     },
 
     printErr(text) {
+      // Filter out harmless warnings that don't affect functionality
+      if (text.includes('reuse-port mode failed')) return;
       console.error('[OpenTTD Error]', text);
     },
 
