@@ -5,6 +5,11 @@
 import { createModule, initFileSystem, setupWebSocket, setupGlobalFunctions, patchSocketFS } from './lib/emscripten-module.js';
 import { audioManager } from './lib/audio-manager.js';
 
+// WASM assets are served from /static folder via parcel-reporter-static-files-copy
+const openttdJsUrl = '/openttd.js';
+const openttdWasmUrl = '/openttd.wasm';
+const openttdDataUrl = '/openttd.data';
+
 // DOM Elements
 const loadingScreen = document.getElementById('loading-screen');
 const audioUnlockScreen = document.getElementById('audio-unlock-screen');
@@ -113,7 +118,13 @@ async function initModule() {
     },
 
     locateFile: (path) => {
-      // WASM files will be in the same directory after build
+      // Map Emscripten file requests to our imported URLs
+      if (path.endsWith('.wasm')) {
+        return openttdWasmUrl;
+      }
+      if (path.endsWith('.data')) {
+        return openttdDataUrl;
+      }
       return path;
     }
   });
@@ -144,7 +155,7 @@ async function loadWasmScript() {
     updateProgress(10, 100, 'Loading WebAssembly...');
 
     const script = document.createElement('script');
-    script.src = 'openttd.js';
+    script.src = openttdJsUrl;
     script.async = true;
 
     script.onload = () => {

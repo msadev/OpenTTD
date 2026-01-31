@@ -90,7 +90,11 @@ export function createModule(config) {
 
     onWarningFs() {
       console.warn('[OpenTTD] Savegames are stored in browser IndexedDB and may be deleted by the browser.');
-    }
+    },
+
+    // WebSocket configuration must be set up here, before openttd.js loads
+    // Emscripten's SOCKFS expects Module.websocket.on to be a function
+    websocket: createWebSocketConfig()
   };
 
   // Attach to window for Emscripten's internal use
@@ -100,53 +104,16 @@ export function createModule(config) {
 }
 
 /**
- * Initializes the filesystem with IDBFS for persistent storage
- * @param {Object} Module
+ * Creates WebSocket configuration object
+ * Must be available before Emscripten initializes SOCKFS
+ *
+ * IMPORTANT: The OpenTTD pre.js patches SOCKFS to call Module.websocket.url
+ * as a FUNCTION, not use it as a string. See os/emscripten/pre.js lines 117-125.
  */
-export function initFileSystem(Module) {
-  Module.preRun.push(() => {
-    const personalDir = '/home/web_user/.openttd';
-
-    try {
-      // Create personal directory
-      Module.FS.mkdir(personalDir);
-
-      // Mount IDBFS for persistent storage
-      Module.FS.mount(Module.IDBFS, {}, personalDir);
-
-      // Sync from IndexedDB to virtual filesystem
-      Module.addRunDependency('syncfs');
-      Module.FS.syncfs(true, (err) => {
-        Module.removeRunDependency('syncfs');
-        if (err) {
-          console.error('[OpenTTD] Failed to sync filesystem:', err);
-        }
-      });
-    } catch (e) {
-      console.error('[OpenTTD] Failed to init filesystem:', e);
-    }
-  });
-
-  // Setup global sync function
-  window.openttd_syncfs = (callback) => {
-    Module.FS.syncfs(false, (err) => {
-      if (err) {
-        console.error('[OpenTTD] Failed to save to IndexedDB:', err);
-      }
-      callback?.();
-    });
-  };
-
-  window.openttd_syncfs_shown_warning = false;
-}
-
-/**
- * Sets up WebSocket configuration for network play
- * @param {Object} Module
- */
-export function setupWebSocket(Module) {
-  Module.websocket = {
-    url: (host, port, proto) => {
+function createWebSocketConfig() {
+  return {
+    // URL must be a function that returns the WebSocket URL for a given connection
+    url(host, port, proto) {
       // OpenTTD content service
       if (host === 'content.openttd.org' && port === 3978 && proto === 'tcp') {
         return 'wss://bananas-server.openttd.org/';
@@ -161,6 +128,27 @@ export function setupWebSocket(Module) {
       return null;
     }
   };
+}
+
+/**
+ * Initializes the filesystem with IDBFS for persistent storage
+ * @param {Object} Module
+ * @deprecated Filesystem initialization is already done in os/emscripten/pre.js
+ */
+export function initFileSystem(Module) {
+  // No-op: Filesystem setup (mkdir, IDBFS mount, syncfs) is already handled
+  // by pre.js which is compiled into openttd.js
+  // See os/emscripten/pre.js lines 23-49
+}
+
+/**
+ * Sets up WebSocket URL resolver for network play
+ * @param {Object} Module
+ * @deprecated WebSocket config is now handled in createWebSocketConfig()
+ */
+export function setupWebSocket(Module) {
+  // No-op: WebSocket URL resolver is now in createWebSocketConfig()
+  // This function is kept for backwards compatibility with main.js
 }
 
 /**
@@ -224,19 +212,9 @@ export function setupGlobalFunctions(Module) {
 /**
  * Patches SOCKFS for proper WebSocket URL handling
  * @param {Object} Module
+ * @deprecated SOCKFS patching is already done in os/emscripten/pre.js which is compiled into openttd.js
  */
 export function patchSocketFS(Module) {
-  Module.preRun.push(() => {
-    // Patch SOCKFS to use custom WebSocket URL function
-    if (typeof SOCKFS !== 'undefined') {
-      SOCKFS.websocket_sock_ops.createPeer_ = SOCKFS.websocket_sock_ops.createPeer;
-      SOCKFS.websocket_sock_ops.createPeer = function(sock, addr, port) {
-        const func = Module.websocket.url;
-        Module.websocket.url = func(addr, port, sock.type === 2 ? 'udp' : 'tcp');
-        const ret = SOCKFS.websocket_sock_ops.createPeer_(sock, addr, port);
-        Module.websocket.url = func;
-        return ret;
-      };
-    }
-  });
+  // No-op: SOCKFS is already patched by pre.js in the compiled openttd.js
+  // The patch uses Module.websocket.url as a function (set in createWebSocketConfig)
 }

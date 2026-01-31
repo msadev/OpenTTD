@@ -17,7 +17,7 @@ const ROOT_DIR = join(__dirname, '..', '..');
 const WEB_DIR = join(__dirname, '..');
 const BUILD_HOST_DIR = join(ROOT_DIR, 'build-host');
 const BUILD_WASM_DIR = join(ROOT_DIR, 'build-wasm');
-const DIST_DIR = join(WEB_DIR, 'src');
+const DIST_DIR = join(WEB_DIR, 'static');
 
 const IS_WINDOWS = platform() === 'win32';
 const EMSDK_VERSION = '3.1.57';
@@ -45,11 +45,12 @@ let EMSDK_DIR = null;
 function exec(command, options = {}) {
   console.log(`\n> ${command}\n`);
   try {
+    const mergedEnv = { ...process.env, ...options.env };
     execSync(command, {
       stdio: 'inherit',
       cwd: options.cwd || ROOT_DIR,
       shell: true,
-      env: { ...process.env, ...options.env },
+      env: mergedEnv,
       ...options
     });
     return true;
@@ -65,14 +66,18 @@ function exec(command, options = {}) {
  */
 function execOutput(command, options = {}) {
   try {
+    const mergedEnv = { ...process.env, ...options.env };
     return execSync(command, {
       cwd: options.cwd || ROOT_DIR,
       shell: true,
       encoding: 'utf8',
-      env: { ...process.env, ...options.env },
+      env: mergedEnv,
       ...options
     }).trim();
-  } catch {
+  } catch (e) {
+    if (options.debug) {
+      console.error('execOutput error:', e.message);
+    }
     return null;
   }
 }
@@ -104,6 +109,29 @@ function findEmsdk() {
 }
 
 /**
+ * Activate emsdk (Windows)
+ */
+function activateEmsdk() {
+  if (EMSDK_DIR === 'PATH' || !IS_WINDOWS) {
+    return;
+  }
+
+  console.log('Activating emsdk...');
+  const emsdk = join(EMSDK_DIR, 'emsdk.bat');
+
+  // Activate the installed version
+  try {
+    execSync(`"${emsdk}" activate ${EMSDK_VERSION}`, {
+      cwd: EMSDK_DIR,
+      stdio: 'inherit',
+      shell: 'cmd.exe'
+    });
+  } catch (e) {
+    console.warn('emsdk activate warning (may be already active)');
+  }
+}
+
+/**
  * Get emsdk environment variables
  */
 function getEmsdkEnv() {
@@ -111,32 +139,66 @@ function getEmsdkEnv() {
     return process.env;
   }
 
-  const envScript = IS_WINDOWS
-    ? join(EMSDK_DIR, 'emsdk_env.bat')
-    : join(EMSDK_DIR, 'emsdk_env.sh');
-
-  if (!existsSync(envScript)) {
-    console.error('emsdk_env script not found');
-    return process.env;
-  }
-
-  // Get environment from emsdk
-  let envOutput;
-  if (IS_WINDOWS) {
-    envOutput = execOutput(`"${envScript}" && set`, { cwd: EMSDK_DIR });
-  } else {
-    envOutput = execOutput(`source "${envScript}" && env`, { cwd: EMSDK_DIR });
-  }
-
-  if (!envOutput) return process.env;
-
   const env = { ...process.env };
-  for (const line of envOutput.split('\n')) {
-    const idx = line.indexOf('=');
-    if (idx > 0) {
-      const key = line.substring(0, idx);
-      const value = line.substring(idx + 1);
-      env[key] = value;
+
+  if (IS_WINDOWS) {
+    // Build emsdk environment manually for Windows
+    const emscriptenDir = join(EMSDK_DIR, 'upstream', 'emscripten');
+    const llvmDir = join(EMSDK_DIR, 'upstream', 'bin');
+
+    // Find node directory (version may vary)
+    let nodeDir = '';
+    const nodePath = join(EMSDK_DIR, 'node');
+    if (existsSync(nodePath)) {
+      const nodeDirs = readdirSync(nodePath).filter(d => d.includes('64bit'));
+      if (nodeDirs.length > 0) {
+        nodeDir = join(nodePath, nodeDirs[0], 'bin');
+      }
+    }
+
+    // Find python directory
+    let pythonDir = '';
+    const pythonPath = join(EMSDK_DIR, 'python');
+    if (existsSync(pythonPath)) {
+      const pythonDirs = readdirSync(pythonPath).filter(d => d.includes('64bit'));
+      if (pythonDirs.length > 0) {
+        pythonDir = join(pythonPath, pythonDirs[0]);
+      }
+    }
+
+    // Prepend emsdk paths to PATH (Windows uses 'Path' not 'PATH')
+    const emsdkPaths = [emscriptenDir, llvmDir, nodeDir, pythonDir, EMSDK_DIR].filter(Boolean);
+    const currentPath = env.PATH || env.Path || '';
+    env.PATH = emsdkPaths.join(';') + ';' + currentPath;
+    // Also set Path for Windows compatibility
+    env.Path = env.PATH;
+
+    // Set emsdk environment variables
+    env.EMSDK = EMSDK_DIR;
+    env.EMSDK_NODE = nodeDir ? join(nodeDir, 'node.exe') : '';
+    env.EM_CONFIG = join(EMSDK_DIR, '.emscripten');
+
+    console.log('Configured emsdk environment manually');
+    console.log('Emscripten dir:', emscriptenDir);
+  } else {
+    const envScript = join(EMSDK_DIR, 'emsdk_env.sh');
+
+    if (!existsSync(envScript)) {
+      console.error('emsdk_env script not found');
+      return process.env;
+    }
+
+    const envOutput = execOutput(`source "${envScript}" && env`, { cwd: EMSDK_DIR });
+
+    if (!envOutput) return process.env;
+
+    for (const line of envOutput.split('\n')) {
+      const idx = line.indexOf('=');
+      if (idx > 0) {
+        const key = line.substring(0, idx);
+        const value = line.substring(idx + 1);
+        env[key] = value;
+      }
     }
   }
 
@@ -205,20 +267,25 @@ function buildWasm(env) {
 
   const hostBinaryDir = BUILD_HOST_DIR.replace(/\\/g, '/');
 
-  // Configure with emcmake
+  // Configure with cmake using Emscripten toolchain directly (more reliable on Windows)
+  const emsdkDir = EMSDK_DIR.replace(/\\/g, '/');
+  const toolchainFile = `${emsdkDir}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake`;
+
   const cmakeCmd = [
-    'emcmake cmake ..',
+    'cmake ..',
+    IS_WINDOWS ? '-G Ninja' : '',
+    `-DCMAKE_TOOLCHAIN_FILE="${toolchainFile}"`,
     `-DHOST_BINARY_DIR="${hostBinaryDir}"`,
     '-DCMAKE_BUILD_TYPE=Release',
     '-DOPTION_USE_ASSERTS=OFF'
-  ].join(' ');
+  ].filter(Boolean).join(' ');
 
   exec(cmakeCmd, { cwd: BUILD_WASM_DIR, env });
 
-  // Build with emmake
+  // Build
   const buildCmd = IS_WINDOWS
-    ? 'emmake cmake --build . --config Release'
-    : 'emmake make -j4';
+    ? 'ninja'
+    : 'make -j4';
 
   exec(buildCmd, { cwd: BUILD_WASM_DIR, env });
 }
@@ -265,7 +332,7 @@ function copyArtifacts() {
   }
 
   if (copied > 0) {
-    console.log(`\n${copied} file(s) copied to web/src/`);
+    console.log(`\n${copied} file(s) copied to web/static/`);
   } else {
     console.error('\nNo artifacts found! Build may have failed.');
     process.exit(1);
@@ -348,16 +415,34 @@ async function main() {
     }
   }
 
-  // Get emsdk environment
+  // Activate and get emsdk environment
+  activateEmsdk();
   const env = getEmsdkEnv();
 
   // Verify emcc works
-  const emccVersion = execOutput('emcc --version', { env });
+  // On Windows, use emcc.bat explicitly
+  const emccCmd = IS_WINDOWS ? 'emcc.bat --version' : 'emcc --version';
+  const emccVersion = execOutput(emccCmd, { env, debug: true });
   if (!emccVersion) {
-    console.error('Error: emcc not working. Try running emsdk_env first.');
-    process.exit(1);
+    // Try with full path as fallback
+    if (IS_WINDOWS && EMSDK_DIR !== 'PATH') {
+      const emccFullPath = join(EMSDK_DIR, 'upstream', 'emscripten', 'emcc.bat');
+      console.log(`Trying full path: ${emccFullPath}`);
+      const emccVersionFull = execOutput(`"${emccFullPath}" --version`, { env, debug: true });
+      if (emccVersionFull) {
+        console.log(`Emscripten: ${emccVersionFull.split('\n')[0]}`);
+      } else {
+        console.error('Error: emcc not working even with full path.');
+        console.error('PATH includes:', env.PATH?.split(';').slice(0, 5).join('\n  '));
+        process.exit(1);
+      }
+    } else {
+      console.error('Error: emcc not working. Try running emsdk_env first.');
+      process.exit(1);
+    }
+  } else {
+    console.log(`Emscripten: ${emccVersion.split('\n')[0]}`);
   }
-  console.log(`Emscripten: ${emccVersion.split('\n')[0]}`);
 
   // Build host tools
   if (!args.includes('--skip-host')) {
