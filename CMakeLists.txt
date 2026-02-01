@@ -369,13 +369,10 @@ if(EMSCRIPTEN)
     target_link_libraries(WASM::WASM INTERFACE "-s EXPORTED_FUNCTIONS='[\"_main\", \"_em_openttd_add_server\", \"_em_openttd_add_server_with_info\"]' -s EXPORTED_RUNTIME_METHODS='[\"cwrap\"]'")
 
     # Preload all the files we generate during build.
-    # As we do not compile with FreeType / FontConfig, we also have no way to
-    # render several languages (like Chinese, ..), so where do you draw the
-    # line what languages to include and which not? In the end, especially as
-    # the more languages you add the slower downloading becomes, we decided to
-    # only ship the English language.
+    # Note: Languages requiring special fonts (Chinese, Japanese, Korean, etc.) may not
+    # render correctly without FreeType/FontConfig, but Latin-based languages work fine.
     target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_BINARY_DIR}/baseset@/baseset")
-    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_BINARY_DIR}/lang/english.lng@/lang/english.lng")
+    target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_BINARY_DIR}/lang@/lang")
     target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/bin/ai@/ai")
     target_link_libraries(WASM::WASM INTERFACE "--preload-file ${CMAKE_SOURCE_DIR}/bin/game@/game")
     # Documentation files for the in-game text file viewer
