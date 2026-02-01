@@ -13,14 +13,35 @@ SMF(JZZ);
 
 let synth = null;
 let midiOut = null;
+let volumeScaler = null;  // Middleware to scale volume messages
 let currentPlayer = null;
 let currentVolume = 1.0;
 let isPlaying = false;
 let initPromise = null;
 
 /**
- * Initialize the MIDI synthesizer
+ * Create a MIDI middleware that scales CC7 (volume) messages
+ * This ensures the user's volume setting is respected even when
+ * the MIDI file contains its own volume events
  */
+function createVolumeScaler() {
+  return JZZ.Widget({
+    _receive: function(msg) {
+      // Check if this is a Control Change message (0xB0-0xBF) for CC7 (Volume)
+      if (msg.length >= 3 && (msg[0] & 0xF0) === 0xB0 && msg[1] === 7) {
+        // Scale the volume value by our current volume setting
+        const originalVolume = msg[2];
+        const scaledVolume = Math.floor(originalVolume * currentVolume);
+        // Create a new message with the scaled volume
+        this._emit([msg[0], msg[1], scaledVolume]);
+      } else {
+        // Pass through all other messages unchanged
+        this._emit(msg);
+      }
+    }
+  });
+}
+
 async function initSynth() {
   if (synth) return synth;
 
@@ -33,7 +54,13 @@ async function initSynth() {
 
       // Create the Tiny synth (General MIDI software synthesizer)
       synth = JZZ.synth.Tiny();
-      midiOut = synth;
+
+      // Create volume scaler middleware that sits between player and synth
+      volumeScaler = createVolumeScaler();
+      volumeScaler.connect(synth);
+
+      // midiOut points to the scaler, which forwards to synth
+      midiOut = volumeScaler;
 
       return synth;
     } catch (e) {
@@ -141,15 +168,17 @@ export function isMidiPlaying() {
 
 /**
  * Apply volume to all channels
+ * Sends directly to synth to set the base volume level
  */
 function applyVolume() {
-  if (!midiOut) return;
+  if (!synth) return;
 
   // Set volume on all 16 MIDI channels using CC7 (Volume)
+  // Send directly to synth (not via scaler) since this is our master volume
   const volumeValue = Math.floor(currentVolume * 127);
   for (let ch = 0; ch < 16; ch++) {
     try {
-      midiOut.send([0xB0 + ch, 7, volumeValue]);
+      synth.send([0xB0 + ch, 7, volumeValue]);
     } catch (e) {
       // Ignore
     }
