@@ -8,7 +8,10 @@
       "Bash(cmd /c \"dir C:\\\\emsdk\\\\upstream\\\\emscripten\\\\emcc* 2>nul\")",
       "Bash(cmd /c \"if exist C:\\\\emsdk\\\\upstream\\\\emscripten \\(echo exists\\) else \\(echo not exists\\)\")",
       "Bash(powershell -Command:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(xxd:*)",
+      "Bash(ls:*)",
+      "Bash(git fetch:*)"
     ]
   }
 }
