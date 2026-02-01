@@ -27,8 +27,9 @@ const PROXY_PORT = parseInt(process.argv[2]) || 8080;
 // Security: List of allowed ports (OpenTTD default ports)
 // 3975 = STUN, 3976 = Coordinator, 3978 = Content, 3979-3989 = Game servers, 3986-3987 = TURN
 const ALLOWED_PORTS = [
-  3975, 3976, 3978,                           // Infrastructure
-  3979, 3980, 3981, 3982, 3983, 3984, 3985,   // Game server ports
+  3973, 3974, 3975, 3976, 3978,                           // Infrastructure
+  3979, 3980, 3981, 3982, 3983, 3984, 3985, 4000,  // Game server ports
+  5010,  25520, // ?
   3986, 3987, 3988, 3989                       // TURN and additional game ports
 ];
 

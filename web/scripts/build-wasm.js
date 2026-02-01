@@ -7,7 +7,7 @@
  */
 
 import { execSync, spawnSync } from 'child_process';
-import { existsSync, mkdirSync, copyFileSync, readdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, copyFileSync, readdirSync, writeFileSync, renameSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { platform, homedir } from 'os';
@@ -21,6 +21,12 @@ const DIST_DIR = join(WEB_DIR, 'static');
 
 const IS_WINDOWS = platform() === 'win32';
 const EMSDK_VERSION = '3.1.57';
+
+// Force version to match official OpenTTD releases for multiplayer compatibility
+// Format: version, isodate, modified, hash, istag, isstabletag
+const FORCE_VERSION = '15.1';
+const FORCE_VERSION_DATE = '20250108';
+const FORCE_VERSION_HASH = '119d71ae952bbf03f9d07f0c3bcfa9bee7e38234';
 
 // Common emsdk locations
 const EMSDK_PATHS = IS_WINDOWS
@@ -256,6 +262,58 @@ function buildHostTools(env) {
 }
 
 /**
+ * Force version for multiplayer compatibility
+ * Temporarily hides .git and creates .ottdrev so CMake uses our version
+ */
+function setupForcedVersion() {
+  const gitDir = join(ROOT_DIR, '.git');
+  const gitBackup = join(ROOT_DIR, '.git.build-backup');
+  const ottdrevFile = join(ROOT_DIR, '.ottdrev');
+  const cmakeCache = join(BUILD_WASM_DIR, 'CMakeCache.txt');
+  const generatedRevCpp = join(BUILD_WASM_DIR, 'generated', 'rev.cpp');
+
+  // Delete CMake cache and generated rev.cpp to force reconfiguration
+  if (existsSync(cmakeCache)) {
+    unlinkSync(cmakeCache);
+    console.log('Deleted CMakeCache.txt to force reconfiguration');
+  }
+  if (existsSync(generatedRevCpp)) {
+    unlinkSync(generatedRevCpp);
+    console.log('Deleted generated/rev.cpp');
+  }
+
+  // Create .ottdrev file with forced version
+  // Format: version\tisodate\tmodified\thash\tistag\tisstabletag
+  const ottdrevContent = `${FORCE_VERSION}\t${FORCE_VERSION_DATE}\t0\t${FORCE_VERSION_HASH}\t1\t1\n`;
+  writeFileSync(ottdrevFile, ottdrevContent);
+  console.log(`Created .ottdrev with version: ${FORCE_VERSION}`);
+
+  // Temporarily rename .git so CMake uses .ottdrev
+  if (existsSync(gitDir) && !existsSync(gitBackup)) {
+    renameSync(gitDir, gitBackup);
+    console.log('Temporarily hidden .git directory');
+  }
+
+  return { gitDir, gitBackup, ottdrevFile };
+}
+
+/**
+ * Restore git directory after build
+ */
+function restoreGitDirectory({ gitDir, gitBackup, ottdrevFile }) {
+  // Restore .git
+  if (existsSync(gitBackup)) {
+    renameSync(gitBackup, gitDir);
+    console.log('Restored .git directory');
+  }
+
+  // Remove .ottdrev
+  if (existsSync(ottdrevFile)) {
+    unlinkSync(ottdrevFile);
+  }
+}
+
+/**
  * Build WASM module
  */
 function buildWasm(env) {
@@ -265,29 +323,42 @@ function buildWasm(env) {
     mkdirSync(BUILD_WASM_DIR, { recursive: true });
   }
 
-  const hostBinaryDir = BUILD_HOST_DIR.replace(/\\/g, '/');
+  // Setup forced version for multiplayer compatibility
+  console.log(`Forcing version to ${FORCE_VERSION} for multiplayer compatibility...`);
+  const versionBackup = setupForcedVersion();
 
-  // Configure with cmake using Emscripten toolchain directly (more reliable on Windows)
-  const emsdkDir = EMSDK_DIR.replace(/\\/g, '/');
-  const toolchainFile = `${emsdkDir}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake`;
+  try {
+    const hostBinaryDir = BUILD_HOST_DIR.replace(/\\/g, '/');
 
-  const cmakeCmd = [
-    'cmake ..',
-    IS_WINDOWS ? '-G Ninja' : '',
-    `-DCMAKE_TOOLCHAIN_FILE="${toolchainFile}"`,
-    `-DHOST_BINARY_DIR="${hostBinaryDir}"`,
-    '-DCMAKE_BUILD_TYPE=Release',
-    '-DOPTION_USE_ASSERTS=OFF'
-  ].filter(Boolean).join(' ');
+    // Configure with cmake using Emscripten toolchain directly (more reliable on Windows)
+    const emsdkDir = EMSDK_DIR.replace(/\\/g, '/');
+    const toolchainFile = `${emsdkDir}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake`;
 
-  exec(cmakeCmd, { cwd: BUILD_WASM_DIR, env });
+    const cmakeCmd = [
+      'cmake ..',
+      IS_WINDOWS ? '-G Ninja' : '',
+      `-DCMAKE_TOOLCHAIN_FILE="${toolchainFile}"`,
+      `-DHOST_BINARY_DIR="${hostBinaryDir}"`,
+      '-DCMAKE_BUILD_TYPE=Release',
+      '-DOPTION_USE_ASSERTS=OFF'
+    ].filter(Boolean).join(' ');
 
-  // Build
-  const buildCmd = IS_WINDOWS
-    ? 'ninja'
-    : 'make -j4';
+    exec(cmakeCmd, { cwd: BUILD_WASM_DIR, env });
 
-  exec(buildCmd, { cwd: BUILD_WASM_DIR, env });
+    // Build (keep .git hidden during build too, as ninja may regenerate rev.cpp)
+    const buildCmd = IS_WINDOWS
+      ? 'ninja'
+      : 'make -j4';
+
+    exec(buildCmd, { cwd: BUILD_WASM_DIR, env });
+
+    // Restore .git after build completes
+    restoreGitDirectory(versionBackup);
+  } catch (e) {
+    // Always restore .git even on failure
+    restoreGitDirectory(versionBackup);
+    throw e;
+  }
 }
 
 /**
