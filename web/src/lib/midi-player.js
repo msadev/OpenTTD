@@ -42,6 +42,30 @@ function createVolumeScaler() {
   });
 }
 
+/**
+ * Patch AudioNode.prototype.disconnect to ignore InvalidAccessError
+ * This works around a bug in JZZ.synth.Tiny where it tries to disconnect
+ * an AudioParam that was never connected (in rhythm/percussion notes)
+ */
+function patchAudioNodeDisconnect() {
+  if (AudioNode.prototype._originalDisconnect) return; // Already patched
+
+  const originalDisconnect = AudioNode.prototype.disconnect;
+  AudioNode.prototype._originalDisconnect = originalDisconnect;
+
+  AudioNode.prototype.disconnect = function(...args) {
+    try {
+      return originalDisconnect.apply(this, args);
+    } catch (e) {
+      // Ignore InvalidAccessError when trying to disconnect an unconnected node
+      if (e.name === 'InvalidAccessError') {
+        return;
+      }
+      throw e;
+    }
+  };
+}
+
 async function initSynth() {
   if (synth) return synth;
 
@@ -49,6 +73,9 @@ async function initSynth() {
 
   initPromise = (async () => {
     try {
+      // Patch AudioNode.disconnect before initializing the synth
+      patchAudioNodeDisconnect();
+
       // Initialize JZZ without requesting MIDI access (we only use the software synth)
       await JZZ({ sysex: false, engine: 'none' });
 
