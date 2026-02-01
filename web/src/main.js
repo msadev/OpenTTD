@@ -10,21 +10,6 @@ import { setupMusicGlobals } from './lib/midi-player.js';
 // Change this to your proxy server URL for production
 window.openttd_websocket_proxy = 'ws://localhost:8080';
 
-// Pre-fetch server list from proxy
-window._openttd_cached_servers = null;
-if (window.openttd_websocket_proxy) {
-  const proxyUrl = window.openttd_websocket_proxy.replace('ws://', 'http://').replace('wss://', 'https://');
-  fetch(proxyUrl + '/servers')
-    .then(response => response.json())
-    .then(servers => {
-      window._openttd_cached_servers = servers;
-      console.log('[OpenTTD] Pre-fetched ' + servers.length + ' servers from proxy');
-    })
-    .catch(err => {
-      console.log('[OpenTTD] Failed to fetch server list:', err);
-    });
-}
-
 // WASM assets are served from /static folder via parcel-reporter-static-files-copy
 const openttdJsUrl = '/openttd.js';
 const openttdWasmUrl = '/openttd.wasm';

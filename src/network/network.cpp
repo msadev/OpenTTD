@@ -1314,11 +1314,74 @@ void NetworkShutDown()
 }
 
 #ifdef __EMSCRIPTEN__
+#include "network_gamelist.h"
+#include "core/network_game_info.h"
+
 extern "C" {
 
 void CDECL em_openttd_add_server(const char *connection_string)
 {
 	NetworkAddServer(connection_string, false, true);
+}
+
+/**
+ * Add a server with full game info (used by web client to avoid querying each server).
+ * This mimics what Receive_GC_LISTING does on desktop.
+ */
+void CDECL em_openttd_add_server_with_info(
+	const char *connection_string,
+	const char *server_name,
+	const char *server_revision,
+	uint8_t clients_on,
+	uint8_t clients_max,
+	uint8_t companies_on,
+	uint8_t companies_max,
+	uint8_t spectators_on,
+	uint16_t map_width,
+	uint16_t map_height,
+	uint8_t landscape,
+	bool use_password,
+	bool dedicated,
+	int32_t calendar_date,
+	int32_t calendar_start,
+	double ticks_playing,
+	const char *gamescript_name,
+	int32_t gamescript_version
+)
+{
+	_network_game_list_version++;
+
+	NetworkGame *item = NetworkGameListAddItem(connection_string);
+
+	/* Fill in the game info */
+	item->info.server_name = server_name;
+	item->info.server_revision = server_revision;
+	item->info.clients_on = clients_on;
+	item->info.clients_max = clients_max;
+	item->info.companies_on = companies_on;
+	item->info.companies_max = companies_max;
+	item->info.spectators_on = spectators_on;
+	item->info.map_width = map_width;
+	item->info.map_height = map_height;
+	item->info.landscape = static_cast<LandscapeType>(landscape);
+	item->info.use_password = use_password;
+	item->info.dedicated = dedicated;
+	item->info.calendar_date = TimerGameCalendar::Date(calendar_date);
+	item->info.calendar_start = TimerGameCalendar::Date(calendar_start);
+	item->info.ticks_playing = static_cast<uint64_t>(ticks_playing);
+	item->info.gamescript_name = gamescript_name ? gamescript_name : "";
+	item->info.gamescript_version = gamescript_version;
+
+	/* Check for compatibility with the client. */
+	CheckGameCompatibility(item->info);
+
+	/* Mark server as online. */
+	item->status = NGLS_ONLINE;
+
+	/* Mark the item as up-to-date. */
+	item->version = _network_game_list_version;
+
+	UpdateNetworkGameWindow();
 }
 
 }

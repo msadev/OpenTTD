@@ -20,7 +20,7 @@
 import { WebSocketServer } from 'ws';
 import { createServer } from 'http';
 import net from 'net';
-import { fetchServerList } from './game-coordinator.js';
+import { fetchServerList, resolveInviteCode } from './game-coordinator.js';
 
 const PROXY_PORT = parseInt(process.argv[2]) || 8080;
 
@@ -84,6 +84,31 @@ const httpServer = createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok' }));
+    return;
+  }
+
+  // Resolve invite code to direct address
+  // Format: /resolve/<invite_code> (with or without leading +)
+  if (req.method === 'GET' && req.url.startsWith('/resolve/')) {
+    try {
+      const inviteCode = decodeURIComponent(req.url.substring('/resolve/'.length));
+      if (!inviteCode) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Missing invite code' }));
+        return;
+      }
+
+      console.log(`Resolving invite code: ${inviteCode}`);
+      const result = await resolveInviteCode(inviteCode);
+      console.log(`Resolved ${inviteCode} to ${result.hostname}:${result.port} (${result.type})`);
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    } catch (err) {
+      console.error('Error resolving invite code:', err.message);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
     return;
   }
 
@@ -186,6 +211,7 @@ httpServer.listen(PROXY_PORT, () => {
   console.log(`OpenTTD WebSocket Proxy listening on port ${PROXY_PORT}`);
   console.log(`  WebSocket: ws://localhost:${PROXY_PORT}/connect/<host>/<port>`);
   console.log(`  Server List: http://localhost:${PROXY_PORT}/servers`);
+  console.log(`  Resolve Invite: http://localhost:${PROXY_PORT}/resolve/<invite_code>`);
 });
 
 // Graceful shutdown

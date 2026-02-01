@@ -444,13 +444,9 @@ public:
 		this->filter_editbox.cancel_button = QueryString::ACTION_CLEAR;
 		this->SetFocusedWidget(WID_NG_FILTER);
 
-		/* As the Game Coordinator doesn't support "websocket" servers yet, we
-		 * let "os/emscripten/pre.js" hardcode a list of servers people can
-		 * join. This means the serverlist is curated for now, but it is the
-		 * best we can offer. */
-#ifdef __EMSCRIPTEN__
-		EM_ASM(if (window["openttd_server_list"]) openttd_server_list());
-#endif
+		/* In Emscripten, the server list is fetched from the WebSocket proxy
+		 * when the user clicks "Search Internet", not automatically on window open.
+		 * This matches the desktop behavior. */
 
 		this->last_joined = NetworkAddServer(_settings_client.network.last_joined, false);
 		this->server = this->last_joined;
@@ -586,9 +582,9 @@ public:
 		}
 
 #ifdef __EMSCRIPTEN__
-		this->SetWidgetDisabledState(WID_NG_SEARCH_INTERNET, true);
+		/* In Emscripten, Search Internet works via the WebSocket proxy */
+		/* LAN search and hosting are not supported */
 		this->SetWidgetDisabledState(WID_NG_SEARCH_LAN, true);
-		this->SetWidgetDisabledState(WID_NG_ADD, true);
 		this->SetWidgetDisabledState(WID_NG_START, true);
 #endif
 
@@ -713,7 +709,12 @@ public:
 			}
 
 			case WID_NG_SEARCH_INTERNET:
+#ifdef __EMSCRIPTEN__
+				/* In Emscripten, fetch server list from WebSocket proxy */
+				EM_ASM(if (window["openttd_server_list"]) openttd_server_list());
+#else
 				_network_coordinator_client.GetListing();
+#endif
 				this->searched_internet = true;
 				break;
 

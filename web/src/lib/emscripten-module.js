@@ -180,11 +180,8 @@ export function setupGlobalFunctions(Module) {
     });
   };
 
-  window.openttd_server_list = () => {
-    // Add custom servers here if needed
-    // const addServer = Module.cwrap('em_openttd_add_server', null, ['string']);
-    // addServer('localhost:3979');
-  };
+  // openttd_server_list is defined in os/emscripten/pre.js
+  // It fetches servers from the proxy when Search Internet is clicked
 
   // Handle URL opening with mouse button tracking
   let leftButtonDown = false;

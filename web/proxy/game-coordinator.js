@@ -2,6 +2,7 @@
  * OpenTTD Game Coordinator Client
  *
  * Queries the Game Coordinator to get the list of public servers.
+ * Also resolves invite codes to direct connection addresses.
  * The Game Coordinator uses a custom binary protocol over TCP.
  */
 
@@ -15,9 +16,16 @@ const NETWORK_GAME_INFO_VERSION = 7;
 const OPENTTD_REVISION = '14.1'; // Pretend to be a recent stable version
 
 // Packet types
+const PACKET_COORDINATOR_GC_ERROR = 0;
 const PACKET_COORDINATOR_CLIENT_LISTING = 4;
 const PACKET_COORDINATOR_GC_LISTING = 5;
+const PACKET_COORDINATOR_CLIENT_CONNECT = 6;
+const PACKET_COORDINATOR_GC_CONNECTING = 7;
+const PACKET_COORDINATOR_GC_CONNECT_FAILED = 9;
+const PACKET_COORDINATOR_GC_DIRECT_CONNECT = 11;
+const PACKET_COORDINATOR_GC_STUN_REQUEST = 12;
 const PACKET_COORDINATOR_GC_NEWGRF_LOOKUP = 15;
+const PACKET_COORDINATOR_GC_TURN_CONNECT = 16;
 
 // Landscape types
 const LANDSCAPE_NAMES = ['Temperate', 'Arctic', 'Tropical', 'Toyland'];
@@ -349,23 +357,213 @@ function parseListingPacket(payload, newgrfLookup) {
   return { servers, done: false };
 }
 
+/**
+ * Resolve an invite code to a direct connection address
+ * @param {string} inviteCode The invite code (with or without leading +)
+ * @returns {Promise<{hostname: string, port: number}>} The resolved address
+ */
+export async function resolveInviteCode(inviteCode) {
+  // Ensure invite code starts with +
+  if (!inviteCode.startsWith('+')) {
+    inviteCode = '+' + inviteCode;
+  }
+
+  return new Promise((resolve, reject) => {
+    let buffer = Buffer.alloc(0);
+    let timeout;
+    let token = null;
+
+    const socket = net.createConnection({
+      host: COORDINATOR_HOST,
+      port: COORDINATOR_PORT,
+    });
+
+    socket.setTimeout(15000);
+
+    socket.on('connect', () => {
+      // Send CLIENT_CONNECT packet
+      const packet = createConnectPacket(inviteCode);
+      socket.write(packet);
+
+      // Set timeout for response
+      timeout = setTimeout(() => {
+        socket.destroy();
+        reject(new Error('Timeout waiting for coordinator response'));
+      }, 10000);
+    });
+
+    socket.on('data', (data) => {
+      buffer = Buffer.concat([buffer, data]);
+
+      // Process complete packets
+      while (buffer.length >= 3) {
+        const packetSize = buffer.readUInt16LE(0);
+
+        if (buffer.length < packetSize) {
+          break; // Wait for more data
+        }
+
+        const packetType = buffer.readUInt8(2);
+        const payload = buffer.subarray(3, packetSize);
+
+        if (packetType === PACKET_COORDINATOR_GC_ERROR) {
+          clearTimeout(timeout);
+          socket.destroy();
+          const errorType = payload.readUInt8(0);
+          const detail = readString(payload, 1);
+          reject(new Error(`Coordinator error ${errorType}: ${detail}`));
+          return;
+        }
+
+        if (packetType === PACKET_COORDINATOR_GC_CONNECTING) {
+          // Store token for tracking
+          token = readString(payload, 0);
+          console.log(`[Coordinator] Got token: ${token}`);
+        }
+
+        if (packetType === PACKET_COORDINATOR_GC_DIRECT_CONNECT) {
+          clearTimeout(timeout);
+          // Parse: token (string), tracking_number (uint8), hostname (string), port (uint16)
+          let offset = 0;
+          const responseToken = readString(payload, offset);
+          offset += responseToken.length + 1;
+          const trackingNumber = payload.readUInt8(offset);
+          offset += 1;
+          const hostname = readString(payload, offset);
+          offset += hostname.length + 1;
+          const port = payload.readUInt16LE(offset);
+
+          console.log(`[Coordinator] Direct connect: ${hostname}:${port}`);
+          socket.end();
+          resolve({ hostname, port, type: 'direct' });
+          return;
+        }
+
+        if (packetType === PACKET_COORDINATOR_GC_STUN_REQUEST) {
+          // Server requires STUN - we can't do that from the proxy
+          // But we can still wait for a possible TURN fallback
+          console.log(`[Coordinator] Server requires STUN, waiting for TURN fallback...`);
+        }
+
+        if (packetType === PACKET_COORDINATOR_GC_TURN_CONNECT) {
+          clearTimeout(timeout);
+          // Parse: token (string), tracking_number (uint8), ticket (string), connection_string (string)
+          let offset = 0;
+          const responseToken = readString(payload, offset);
+          offset += responseToken.length + 1;
+          const trackingNumber = payload.readUInt8(offset);
+          offset += 1;
+          const ticket = readString(payload, offset);
+          offset += ticket.length + 1;
+          const connectionString = readString(payload, offset);
+
+          console.log(`[Coordinator] TURN connect: ${connectionString} (ticket: ${ticket})`);
+          socket.end();
+          // Parse connection string (host:port format)
+          const [turnHost, turnPort] = connectionString.split(':');
+          resolve({
+            hostname: turnHost,
+            port: parseInt(turnPort) || 3979,
+            type: 'turn',
+            ticket
+          });
+          return;
+        }
+
+        if (packetType === PACKET_COORDINATOR_GC_CONNECT_FAILED) {
+          clearTimeout(timeout);
+          socket.destroy();
+          reject(new Error('Connection failed - server may be offline or unreachable'));
+          return;
+        }
+
+        buffer = buffer.subarray(packetSize);
+      }
+    });
+
+    socket.on('error', (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
+
+    socket.on('timeout', () => {
+      clearTimeout(timeout);
+      socket.destroy();
+      reject(new Error('Connection timeout'));
+    });
+
+    socket.on('close', () => {
+      clearTimeout(timeout);
+    });
+  });
+}
+
+/**
+ * Create a CLIENT_CONNECT packet
+ */
+function createConnectPacket(inviteCode) {
+  const inviteCodeBytes = Buffer.from(inviteCode + '\0', 'utf8');
+  const payloadSize = 1 + inviteCodeBytes.length; // version + invite_code
+  const packetSize = 3 + payloadSize; // header + payload
+
+  const packet = Buffer.alloc(packetSize);
+  let offset = 0;
+
+  // Packet header
+  packet.writeUInt16LE(packetSize, offset); offset += 2;
+  packet.writeUInt8(PACKET_COORDINATOR_CLIENT_CONNECT, offset); offset += 1;
+
+  // Payload
+  packet.writeUInt8(NETWORK_COORDINATOR_VERSION, offset); offset += 1;
+  inviteCodeBytes.copy(packet, offset);
+
+  return packet;
+}
+
+/**
+ * Read a null-terminated string from buffer
+ */
+function readString(buffer, offset) {
+  let end = offset;
+  while (end < buffer.length && buffer[end] !== 0) {
+    end++;
+  }
+  return buffer.subarray(offset, end).toString('utf8');
+}
+
 // CLI test
 if (process.argv[1].endsWith('game-coordinator.js')) {
-  console.log('Fetching server list from Game Coordinator...');
-  fetchServerList()
-    .then((servers) => {
-      console.log(`Found ${servers.length} servers:\n`);
-      servers.forEach((server, i) => {
-        console.log(`${i + 1}. ${server.name}`);
-        console.log(`   Address: ${server.connection_string}`);
-        console.log(`   Version: ${server.version}`);
-        console.log(`   Players: ${server.clients_on}/${server.clients_max}`);
-        console.log(`   Map: ${server.map_width}x${server.map_height} (${server.landscape})`);
-        console.log(`   Password: ${server.password ? 'Yes' : 'No'}`);
-        console.log('');
+  const testInviteCode = process.argv[2];
+
+  if (testInviteCode) {
+    console.log(`Resolving invite code: ${testInviteCode}...`);
+    resolveInviteCode(testInviteCode)
+      .then((result) => {
+        console.log(`Resolved to: ${result.hostname}:${result.port} (${result.type})`);
+        if (result.ticket) {
+          console.log(`TURN ticket: ${result.ticket}`);
+        }
+      })
+      .catch((err) => {
+        console.error('Error:', err.message);
       });
-    })
-    .catch((err) => {
-      console.error('Error:', err);
-    });
+  } else {
+    console.log('Fetching server list from Game Coordinator...');
+    fetchServerList()
+      .then((servers) => {
+        console.log(`Found ${servers.length} servers:\n`);
+        servers.forEach((server, i) => {
+          console.log(`${i + 1}. ${server.name}`);
+          console.log(`   Address: ${server.connection_string}`);
+          console.log(`   Version: ${server.version}`);
+          console.log(`   Players: ${server.clients_on}/${server.clients_max}`);
+          console.log(`   Map: ${server.map_width}x${server.map_height} (${server.landscape})`);
+          console.log(`   Password: ${server.password ? 'Yes' : 'No'}`);
+          console.log('');
+        });
+      })
+      .catch((err) => {
+        console.error('Error:', err);
+      });
+  }
 }

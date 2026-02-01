@@ -79,25 +79,71 @@ Module.preRun.push(function() {
     }
 
     window.openttd_server_list = function() {
-        add_server = Module.cwrap("em_openttd_add_server", null, ["string"]);
+        /* Use the new function that accepts full server info to avoid querying each server */
+        var add_server_with_info = Module.cwrap("em_openttd_add_server_with_info", null, [
+            "string",  /* connection_string */
+            "string",  /* server_name */
+            "string",  /* server_revision */
+            "number",  /* clients_on */
+            "number",  /* clients_max */
+            "number",  /* companies_on */
+            "number",  /* companies_max */
+            "number",  /* spectators_on */
+            "number",  /* map_width */
+            "number",  /* map_height */
+            "number",  /* landscape */
+            "boolean", /* use_password */
+            "boolean", /* dedicated */
+            "number",  /* calendar_date */
+            "number",  /* calendar_start */
+            "number",  /* ticks_playing (double in C++, converted to uint64) */
+            "string",  /* gamescript_name */
+            "number"   /* gamescript_version */
+        ]);
 
-        /* Add servers that support WebSocket here. Examples:
-         *  add_server("localhost");
-         *  add_server("localhost:3979");
-         *  add_server("127.0.0.1:3979");
-         *  add_server("[::1]:3979");
-         */
+        /* Landscape type mapping */
+        var landscapeTypes = {
+            'Temperate': 0,
+            'Arctic': 1,
+            'Tropical': 2,
+            'Toyland': 3
+        };
 
-        /* Use pre-fetched server list if available */
-        if (window._openttd_cached_servers) {
-            /* Filter out invite codes (starting with +) as they require Game Coordinator */
-            var directServers = window._openttd_cached_servers.filter(function(server) {
-                return !server.connection_string.startsWith('+');
-            });
-            console.log('[OpenTTD] Adding ' + directServers.length + ' direct servers (filtered from ' + window._openttd_cached_servers.length + ')');
-            directServers.forEach(function(server) {
-                add_server(server.connection_string);
-            });
+        /* Fetch server list from proxy on demand (when Search Internet is clicked) */
+        if (window.openttd_websocket_proxy) {
+            var proxyUrl = window.openttd_websocket_proxy.replace('ws://', 'http://').replace('wss://', 'https://');
+            console.log('[OpenTTD] Fetching server list from proxy...');
+
+            fetch(proxyUrl + '/servers')
+                .then(function(response) { return response.json(); })
+                .then(function(servers) {
+                    console.log('[OpenTTD] Got ' + servers.length + ' servers from proxy');
+                    servers.forEach(function(server) {
+                        add_server_with_info(
+                            server.connection_string,
+                            server.name || 'Unknown Server',
+                            server.version || '',
+                            server.clients_on || 0,
+                            server.clients_max || 0,
+                            server.companies_on || 0,
+                            server.companies_max || 0,
+                            server.spectators_on || 0,
+                            server.map_width || 256,
+                            server.map_height || 256,
+                            landscapeTypes[server.landscape] || 0,
+                            server.password || false,
+                            server.dedicated || false,
+                            server.calendar_date || 0,
+                            server.calendar_start || 0,
+                            server.ticks_playing || 0,
+                            server.gamescript_name || '',
+                            server.gamescript_version || -1
+                        );
+                    });
+                })
+                .catch(function(err) {
+                    console.log('[OpenTTD] Failed to fetch server list:', err);
+                });
         }
     }
 
