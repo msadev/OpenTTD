@@ -1,11 +1,7 @@
 Module.arguments.push('-memscripten', '-vsdl');
 Module['websocket'] = { url: function(host, port, proto) {
-    /* Log all network connection attempts */
-    console.log('[OpenTTD] Network connect: ' + host + ':' + port + ' (' + proto + ')');
-
     /* openttd.org hosts a WebSocket proxy for the content service. */
     if (host == "content.openttd.org" && port == 3978 && proto == "tcp") {
-        console.log('[OpenTTD] -> Using official content proxy');
         return "wss://bananas-server.openttd.org/";
     }
 
@@ -14,13 +10,9 @@ Module['websocket'] = { url: function(host, port, proto) {
         /* Invite codes start with '+' - these need special handling via the proxy's
          * /invite/ endpoint which will resolve them and potentially use TURN relay. */
         if (host.startsWith('+')) {
-            var url = window.openttd_websocket_proxy + '/invite/' + encodeURIComponent(host);
-            console.log('[OpenTTD] -> Invite code via proxy: ' + url);
-            return url;
+            return window.openttd_websocket_proxy + '/invite/' + encodeURIComponent(host);
         }
-        var url = window.openttd_websocket_proxy + '/connect/' + host + '/' + port;
-        console.log('[OpenTTD] -> Direct via proxy: ' + url);
-        return url;
+        return window.openttd_websocket_proxy + '/connect/' + host + '/' + port;
     }
 
     /* Everything else just tries to make a default WebSocket connection.
@@ -31,11 +23,9 @@ Module['websocket'] = { url: function(host, port, proto) {
     if (location.protocol === 'https:') {
         /* Insecure WebSockets do not work over HTTPS, so we force
          * secure ones. */
-        console.log('[OpenTTD] -> HTTPS mode, using wss://');
         return 'wss://';
     } else {
         /* Use the default provided by Emscripten. */
-        console.log('[OpenTTD] -> Using default WebSocket');
         return null;
     }
 } };

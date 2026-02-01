@@ -195,6 +195,14 @@ bool NetworkTCPSocketHandler::CanSendReceive()
 {
 	assert(this->sock != INVALID_SOCKET);
 
+#ifdef __EMSCRIPTEN__
+	/* In Emscripten, sockets are implemented via WebSockets.
+	 * select() doesn't work reliably with WebSockets, so we assume
+	 * the socket is always writable and check for readability differently. */
+	this->writable = true;
+	/* For now, assume there might be data to read - the actual recv will handle EAGAIN */
+	return true;
+#else
 	fd_set read_fd, write_fd;
 	struct timeval tv;
 
@@ -209,4 +217,5 @@ bool NetworkTCPSocketHandler::CanSendReceive()
 
 	this->writable = !!FD_ISSET(this->sock, &write_fd);
 	return FD_ISSET(this->sock, &read_fd) != 0;
+#endif
 }

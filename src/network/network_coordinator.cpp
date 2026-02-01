@@ -405,6 +405,11 @@ bool ClientNetworkCoordinatorSocketHandler::Receive_GC_TURN_CONNECT(Packet &p)
 			return true;
 		}
 
+	#ifdef __EMSCRIPTEN__
+		/* In browser environment, TURN is the only viable connection method.
+		 * Skip the confirmation dialog and always allow TURN relay. */
+		this->StartTurnConnection(token);
+#else
 		switch (_settings_client.network.use_relay_service) {
 			case URS_NEVER:
 				this->ConnectFailure(token, 0);
@@ -418,6 +423,7 @@ bool ClientNetworkCoordinatorSocketHandler::Receive_GC_TURN_CONNECT(Packet &p)
 				this->StartTurnConnection(token);
 				break;
 		}
+#endif
 	} else {
 		this->StartTurnConnection(token);
 	}
