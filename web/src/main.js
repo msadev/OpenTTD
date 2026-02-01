@@ -24,7 +24,6 @@ const progressFill = document.getElementById('progress-fill');
 const loadingStatus = document.getElementById('loading-status');
 const loadingDetails = document.getElementById('loading-details');
 const startButton = document.getElementById('start-button');
-const fullscreenButton = document.getElementById('fullscreen-button');
 const errorTitle = document.getElementById('error-title');
 const errorMessage = document.getElementById('error-message');
 
@@ -73,9 +72,6 @@ async function startGame() {
     // Hide screens, show canvas
     showScreen(null);
     canvas.focus();
-
-    // Show fullscreen button
-    fullscreenButton.classList.remove('hidden');
 
     console.log('[OpenTTD] Game started');
   } catch (e) {
@@ -190,15 +186,6 @@ function setupEventListeners() {
   audioUnlockScreen.addEventListener('click', (e) => {
     if (e.target !== startButton) {
       startGame();
-    }
-  });
-
-  // Fullscreen button
-  fullscreenButton.addEventListener('click', () => {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      document.documentElement.requestFullscreen();
     }
   });
 
