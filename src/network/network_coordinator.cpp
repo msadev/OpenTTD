@@ -320,8 +320,17 @@ bool ClientNetworkCoordinatorSocketHandler::Receive_GC_STUN_REQUEST(Packet &p)
 	std::string token = p.Recv_string(NETWORK_TOKEN_LENGTH);
 	Debug(net, 9, "Coordinator::Receive_GC_STUN_REQUEST({})", token);
 
+#ifdef __EMSCRIPTEN__
+	/* STUN (peer-to-peer NAT traversal) cannot work in a browser environment.
+	 * Immediately report STUN failure for both IPv4 and IPv6 to trigger
+	 * the Game Coordinator to fall back to TURN relay without waiting for timeout. */
+	Debug(net, 3, "STUN not supported in Emscripten, sending immediate failure to trigger TURN fallback");
+	this->StunResult(token, AF_INET6, false);
+	this->StunResult(token, AF_INET, false);
+#else
 	this->stun_handlers[token][AF_INET6] = ClientNetworkStunSocketHandler::Stun(token, AF_INET6);
 	this->stun_handlers[token][AF_INET] = ClientNetworkStunSocketHandler::Stun(token, AF_INET);
+#endif
 	return true;
 }
 
