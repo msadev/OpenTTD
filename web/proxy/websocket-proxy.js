@@ -9,12 +9,14 @@
  *
  * Usage:
  *   node websocket-proxy.js [port]
+ *   LOG_LEVEL=debug node websocket-proxy.js [port]
  *
  * Default port: 8080
  *
  * Endpoints:
  *   WebSocket: ws://proxy:8080/connect/<host>/<port> - Direct TCP connection
  *   HTTP GET:  http://proxy:8080/servers - Get public server list as JSON
+ *   HTTP GET:  http://proxy:8080/health - Health check
  */
 
 import { WebSocketServer } from 'ws';
@@ -25,10 +27,16 @@ import { fetchServerList } from './game-coordinator.js';
 const PROXY_PORT = parseInt(process.argv[2]) || 8080;
 
 // Log levels: 'error' (prod), 'info' (default), 'debug' (dev)
-const LOG_LEVEL = process.env.LOG_LEVEL || 'debug';
+const LOG_LEVEL = process.env.LOG_LEVEL || 'error';
 const LOG_LEVELS = { error: 0, info: 1, debug: 2 };
 
-// Logging helper with timestamp and category
+/**
+ * Log a message with timestamp and category
+ * @param {string} category - Log category (HTTP, PROXY, WS, SERVER)
+ * @param {string} message - Log message
+ * @param {*} data - Optional data to log
+ * @param {string} level - Log level (error, info, debug)
+ */
 function log(category, message, data = null, level = 'info') {
   if (LOG_LEVELS[level] > LOG_LEVELS[LOG_LEVEL]) return;
 
@@ -42,15 +50,14 @@ function log(category, message, data = null, level = 'info') {
 }
 
 // Security: List of allowed ports (OpenTTD default ports)
-// 3974 = TURN, 3975 = STUN, 3976 = Coordinator, 3978 = Content, 3979-3989 = Game servers
+// 3973-3974 = TURN, 3975 = STUN, 3976 = Coordinator, 3978 = Content, 3979-3989 = Game servers
 const ALLOWED_PORTS = [
   3973, 3974, 3975, 3976, 3978,              // Infrastructure
   3979, 3980, 3981, 3982, 3983, 3984, 3985,  // Game server ports
   3986, 3987, 3988, 3989,                    // TURN and additional game ports
   1742, 1979, 4000, 4001, 4002, 4003, 4004, 4005,
-  5010, 5020, 5030, 5040, 5050, 5060, 5070, 5080, 5090, 5100, 5110, 5120,  // ottd.top
-  25520,
-  56111,
+  5010, 5020, 5030, 5040, 5050, 5060, 5070, 5080, 5090, 5100, 5110, 5120, 5130, // ottd.top
+  25520, 56111,
 ];
 
 // Security: Optional allowlist of servers (empty = allow all)
@@ -74,18 +81,20 @@ const httpServer = createServer(async (req, res) => {
     return;
   }
 
+  // GET /servers - Return cached server list from Game Coordinator
   if (req.method === 'GET' && req.url === '/servers') {
     try {
       const now = Date.now();
 
-      // Check cache
+      // Return cached list if fresh
       if (serverListCache && (now - serverListCacheTime) < CACHE_TTL) {
+        log('HTTP', 'Returning cached server list', null, 'debug');
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(serverListCache));
         return;
       }
 
-      // Fetch fresh list
+      // Fetch fresh list from Game Coordinator
       log('HTTP', 'Fetching server list from Game Coordinator...');
       const servers = await fetchServerList();
       log('HTTP', `Got ${servers.length} servers`);
@@ -104,13 +113,14 @@ const httpServer = createServer(async (req, res) => {
     return;
   }
 
+  // GET /health - Health check endpoint
   if (req.method === 'GET' && req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok' }));
     return;
   }
 
-  // 404 for other HTTP requests
+  // 404 for other requests
   res.writeHead(404, { 'Content-Type': 'text/plain' });
   res.end('Not Found');
 });
@@ -119,11 +129,14 @@ const httpServer = createServer(async (req, res) => {
 const MAX_WS_BUFFER = 64 * 1024;
 
 /**
- * Handle TCP connection to game server (transparent relay)
+ * Handle WebSocket to TCP connection relay
+ * @param {WebSocket} ws - WebSocket connection from client
+ * @param {string} targetHost - Target TCP host
+ * @param {number} targetPort - Target TCP port
  */
 function handleConnection(ws, targetHost, targetPort) {
   const target = `${targetHost}:${targetPort}`;
-  log('PROXY', `Connecting to ${target}`);
+  log('PROXY', `Connecting to ${target}`, null, 'debug');
 
   const tcpSocket = net.createConnection({
     host: targetHost,
@@ -147,7 +160,7 @@ function handleConnection(ws, targetHost, targetPort) {
   tcpSocket.on('connect', () => {
     clearTimeout(connectTimeout);
     connected = true;
-    log('PROXY', `Connected to ${target}`);
+    log('PROXY', `Connected to ${target}`, null, 'debug');
 
     // Flush any messages that arrived before TCP connected
     for (const msg of pendingMessages) {
@@ -175,7 +188,7 @@ function handleConnection(ws, targetHost, targetPort) {
 
   tcpSocket.on('error', (err) => {
     clearTimeout(connectTimeout);
-    log('PROXY', `TCP error (${target}): ${err.message}`);
+    log('PROXY', `TCP error (${target}): ${err.message}`, null, 'error');
     if (ws.readyState === ws.OPEN) {
       ws.close(1011, `TCP error: ${err.message}`);
     }
