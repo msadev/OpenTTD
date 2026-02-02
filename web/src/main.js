@@ -17,15 +17,20 @@ const openttdDataUrl = '/openttd.data';
 
 // DOM Elements
 const loadingScreen = document.getElementById('loading-screen');
-const audioUnlockScreen = document.getElementById('audio-unlock-screen');
 const errorScreen = document.getElementById('error-screen');
 const canvas = document.getElementById('canvas');
 const progressFill = document.getElementById('progress-fill');
 const loadingStatus = document.getElementById('loading-status');
 const loadingDetails = document.getElementById('loading-details');
+const progressSection = document.getElementById('progress-section');
+const startSection = document.getElementById('start-section');
 const startButton = document.getElementById('start-button');
 const errorTitle = document.getElementById('error-title');
 const errorMessage = document.getElementById('error-message');
+const legalModal = document.getElementById('legal-modal');
+const legalLink = document.getElementById('legal-link');
+const legalClose = document.getElementById('legal-close');
+const legalOk = document.getElementById('legal-ok');
 
 let Module = null;
 
@@ -44,12 +49,27 @@ function updateProgress(current, total, status) {
  */
 function showScreen(screen) {
   loadingScreen.classList.remove('active');
-  audioUnlockScreen.classList.remove('active');
   errorScreen.classList.remove('active');
 
   if (screen) {
     screen.classList.add('active');
   }
+}
+
+/**
+ * Show the start button (hides progress bar)
+ */
+function showStartButton() {
+  progressSection.classList.add('hidden');
+  startSection.classList.remove('hidden');
+}
+
+/**
+ * Show the progress bar (hides start button)
+ */
+function showProgressBar() {
+  startSection.classList.add('hidden');
+  progressSection.classList.remove('hidden');
 }
 
 /**
@@ -62,18 +82,27 @@ function showError(title, message) {
 }
 
 /**
- * Initialize and start the game
+ * Called when user clicks Start Game - unlocks audio and loads WASM
  */
-async function startGame() {
+async function onStartClick() {
   try {
-    // Unlock audio
+    // Unlock audio (user interaction)
     await audioManager.unlock();
 
-    // Hide screens, show canvas
-    showScreen(null);
-    canvas.focus();
+    // Show progress bar, hide start button
+    showProgressBar();
 
-    console.log('[OpenTTD] Game started');
+    // Initialize audio
+    audioManager.init();
+
+    // Setup MIDI music player globals
+    setupMusicGlobals();
+
+    // Initialize module (sets up window.Module)
+    await initModule();
+
+    // Load the WASM script
+    await loadWasmScript();
   } catch (e) {
     console.error('[OpenTTD] Failed to start game:', e);
     showError('Failed to Start', e.message);
@@ -81,16 +110,28 @@ async function startGame() {
 }
 
 /**
+ * Called when WASM is ready - show the game canvas
+ */
+function showGame() {
+  // Hide screens, show canvas
+  showScreen(null);
+  canvas.focus();
+  console.log('[OpenTTD] Game started');
+}
+
+/**
  * Initialize the Emscripten module
  */
 async function initModule() {
-  updateProgress(0, 100, 'Initializing...');
-
   // Create module configuration
   Module = createModule({
     canvas,
 
     onProgress: (current, total, status) => {
+      // Skip "Running" status to keep progress at 100%
+      if (status === 'Running' || (current === 0 && total === 0)) {
+        return;
+      }
       updateProgress(current, total, status);
     },
 
@@ -98,8 +139,8 @@ async function initModule() {
       console.log('[OpenTTD] Module ready');
       updateProgress(100, 100, 'Ready!');
 
-      // Show audio unlock screen
-      showScreen(audioUnlockScreen);
+      // Show the game canvas
+      showGame();
     },
 
     onError: (error) => {
@@ -108,14 +149,8 @@ async function initModule() {
     },
 
     onExit: () => {
-      showScreen(null);
-      document.body.innerHTML = `
-        <div style="display:flex;justify-content:center;align-items:center;height:100vh;background:#1a1a2e;color:white;font-family:sans-serif;flex-direction:column;">
-          <h1>Thanks for playing!</h1>
-          <p>Reload the page to play again.</p>
-          <button onclick="location.reload()" style="margin-top:20px;padding:10px 20px;font-size:16px;cursor:pointer;">Reload</button>
-        </div>
-      `;
+      // Simply reload the page to restart the game
+      location.reload();
     },
 
     locateFile: (path) => {
@@ -141,12 +176,6 @@ async function initModule() {
 
   // Patch SOCKFS
   patchSocketFS(Module);
-
-  // Initialize audio early
-  audioManager.init();
-
-  // Setup MIDI music player globals
-  setupMusicGlobals();
 
   return Module;
 }
@@ -179,15 +208,8 @@ async function loadWasmScript() {
  * Setup event listeners
  */
 function setupEventListeners() {
-  // Start button
-  startButton.addEventListener('click', startGame);
-
-  // Also allow clicking anywhere on audio unlock screen
-  audioUnlockScreen.addEventListener('click', (e) => {
-    if (e.target !== startButton) {
-      startGame();
-    }
-  });
+  // Start button - triggers WASM loading
+  startButton.addEventListener('click', onStartClick);
 
   // Handle visibility change (pause audio when hidden)
   document.addEventListener('visibilitychange', () => {
@@ -211,6 +233,29 @@ function setupEventListeners() {
 
   // Prevent context menu on canvas
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // Legal modal
+  if (legalLink) {
+    legalLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      legalModal.classList.remove('hidden');
+    });
+  }
+
+  const closeLegalModal = () => {
+    legalModal.classList.add('hidden');
+  };
+
+  if (legalClose) {
+    legalClose.addEventListener('click', closeLegalModal);
+  }
+
+  if (legalOk) {
+    legalOk.addEventListener('click', closeLegalModal);
+  }
+
+  // Close modal when clicking backdrop
+  legalModal?.querySelector('.modal-backdrop')?.addEventListener('click', closeLegalModal);
 
   // Handle keyboard events
   canvas.addEventListener('keydown', (e) => {
@@ -264,16 +309,9 @@ async function main() {
 
   setupEventListeners();
 
-  try {
-    // Initialize module first (sets up window.Module)
-    await initModule();
-
-    // Load the WASM script
-    await loadWasmScript();
-  } catch (e) {
-    console.error('[OpenTTD] Failed to initialize:', e);
-    showError('Initialization Failed', e.message);
-  }
+  // Show start button and wait for user click
+  // WASM loading will be triggered by onStartClick
+  showStartButton();
 }
 
 // Start when DOM is ready

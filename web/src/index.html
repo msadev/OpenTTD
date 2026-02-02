@@ -19,31 +19,43 @@
     <div id="loading-screen" class="screen active">
       <div class="loading-container">
         <div class="logo">
+          <img src="./assets/openttd-logo.png" alt="OpenTTD Logo" class="logo-image">
           <h1>OpenTTD</h1>
           <p class="subtitle">Transport Tycoon Deluxe</p>
+          <span class="web-badge">WEB EDITION</span>
         </div>
 
-        <div class="progress-container">
+        <div id="start-section">
+          <button id="start-button" class="start-button">
+            Start Game
+          </button>
+        </div>
+
+        <div id="progress-section" class="progress-container hidden">
           <div class="progress-bar">
             <div id="progress-fill" class="progress-fill"></div>
           </div>
           <p id="loading-status" class="loading-status">Initializing...</p>
+          <div id="loading-details" class="loading-details"></div>
         </div>
-
-        <div id="loading-details" class="loading-details"></div>
       </div>
+
+      <footer class="footer">
+        <div class="footer-content">
+          <p class="footer-credits">
+            <a href="https://www.openttd.org" target="_blank" rel="noopener">OpenTTD</a> is free software licensed under <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.html" target="_blank" rel="noopener">GPL-2.0</a>
+          </p>
+          <p class="footer-links">
+            <a href="#" id="legal-link">Legal Notice</a>
+            <span class="separator">|</span>
+            <a href="https://github.com/OpenTTD/OpenTTD" target="_blank" rel="noopener">GitHub</a>
+            <span class="separator">|</span>
+            <a href="https://wiki.openttd.org" target="_blank" rel="noopener">Wiki</a>
+          </p>
+        </div>
+      </footer>
     </div>
 
-    <!-- Audio Unlock Screen (required by browsers) -->
-    <div id="audio-unlock-screen" class="screen">
-      <div class="unlock-container">
-        <h2>Ready to Play!</h2>
-        <p>Click anywhere to enable audio and start the game</p>
-        <button id="start-button" class="start-button">
-          Start Game
-        </button>
-      </div>
-    </div>
 
     <!-- Error Screen -->
     <div id="error-screen" class="screen">
@@ -62,6 +74,44 @@
     <!-- Overlay UI -->
     <div id="overlay" class="overlay hidden">
       <div id="notification" class="notification hidden"></div>
+    </div>
+
+    <!-- Legal Notice Modal -->
+    <div id="legal-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content ottd-window">
+        <div class="ottd-window-title">
+          <span>Legal Notice</span>
+          <button class="ottd-window-close" id="legal-close">&times;</button>
+        </div>
+        <div class="ottd-window-body">
+          <h3>OpenTTD Web Edition</h3>
+          <p>This is a web-based port of OpenTTD, the open source transport simulation game.</p>
+
+          <h4>License</h4>
+          <p>OpenTTD is free software; you can redistribute it and/or modify it under the terms of the <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.html" target="_blank" rel="noopener">GNU General Public License version 2</a> as published by the Free Software Foundation.</p>
+
+          <h4>Original Game</h4>
+          <p>OpenTTD is based on the game Transport Tycoon Deluxe by Chris Sawyer, published by Microprose.</p>
+
+          <h4>Graphics &amp; Sound</h4>
+          <p>This version uses OpenGFX, OpenSFX and OpenMSX, the open source base sets for OpenTTD, licensed under GPL-2.0.</p>
+
+          <h4>Web Port</h4>
+          <p>This web port was created by <a href="https://github.com/msadev" target="_blank" rel="noopener">msadev</a>. The WebAssembly port is powered by Emscripten. Multiplayer functionality uses a WebSocket proxy.</p>
+
+          <h4>Disclaimer</h4>
+          <p>This software is provided "as is" without warranty of any kind. OpenTTD is not affiliated with the original Transport Tycoon games or their publishers.</p>
+
+          <h4>Source Code</h4>
+          <p>The source code for this web port is available at <a href="https://github.com/msadev/OpenTTD" target="_blank" rel="noopener">github.com/msadev/OpenTTD</a></p>
+          <p>The original OpenTTD source code is available at <a href="https://github.com/OpenTTD/OpenTTD" target="_blank" rel="noopener">github.com/OpenTTD/OpenTTD</a></p>
+
+          <div class="modal-actions">
+            <button class="ottd-button ottd-button--orange" id="legal-ok">OK</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
