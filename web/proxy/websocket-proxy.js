@@ -25,7 +25,7 @@ import { fetchServerList } from './game-coordinator.js';
 const PROXY_PORT = parseInt(process.argv[2]) || 8080;
 
 // Log levels: 'error' (prod), 'info' (default), 'debug' (dev)
-const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
+const LOG_LEVEL = process.env.LOG_LEVEL || 'debug';
 const LOG_LEVELS = { error: 0, info: 1, debug: 2 };
 
 // Logging helper with timestamp and category
@@ -130,14 +130,35 @@ function handleConnection(ws, targetHost, targetPort) {
     port: targetPort,
   });
 
+  // Timeout for connection attempt (10 seconds)
+  const connectTimeout = setTimeout(() => {
+    if (!connected) {
+      log('PROXY', `Connection timeout to ${target}`, null, 'error');
+      tcpSocket.destroy();
+      if (ws.readyState === ws.OPEN) {
+        ws.close(1011, 'Connection timeout');
+      }
+    }
+  }, 10000);
+
   let connected = false;
+  let pendingMessages = [];  // Buffer messages until TCP connected
 
   tcpSocket.on('connect', () => {
+    clearTimeout(connectTimeout);
     connected = true;
-    log('PROXY', `Connected to ${target}`, null, 'debug');
+    log('PROXY', `Connected to ${target}`);
+
+    // Flush any messages that arrived before TCP connected
+    for (const msg of pendingMessages) {
+      log('PROXY', `WS->TCP ${target}: ${msg.length} bytes (flushed)`, null, 'debug');
+      tcpSocket.write(msg);
+    }
+    pendingMessages = [];
   });
 
   tcpSocket.on('data', (data) => {
+    log('PROXY', `TCP->WS ${target}: ${data.length} bytes`, null, 'debug');
     if (ws.readyState === ws.OPEN) {
       ws.send(data);
       // Backpressure: pause TCP if WS buffer is full
@@ -153,7 +174,8 @@ function handleConnection(ws, targetHost, targetPort) {
   });
 
   tcpSocket.on('error', (err) => {
-    log('PROXY', `TCP error (${target}): ${err.message}`, null, 'error');
+    clearTimeout(connectTimeout);
+    log('PROXY', `TCP error (${target}): ${err.message}`);
     if (ws.readyState === ws.OPEN) {
       ws.close(1011, `TCP error: ${err.message}`);
     }
@@ -167,7 +189,15 @@ function handleConnection(ws, targetHost, targetPort) {
   });
 
   ws.on('message', (data) => {
-    if (connected && !tcpSocket.destroyed) {
+    log('PROXY', `WS->TCP ${target}: ${data.length} bytes`, null, 'debug');
+
+    // Buffer messages until TCP is connected
+    if (!connected) {
+      pendingMessages.push(data);
+      return;
+    }
+
+    if (!tcpSocket.destroyed) {
       // Backpressure: pause WS if TCP buffer is full
       const canWrite = tcpSocket.write(data);
       if (!canWrite) {
