@@ -9,7 +9,8 @@
   <title>OpenTTD Web</title>
 
   <link rel="stylesheet" href="./styles/main.css">
-
+  
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
@@ -48,7 +49,9 @@
           <p class="footer-links">
             <a href="#" id="legal-link">Legal Notice</a>
             <span class="separator">|</span>
-            <a href="https://github.com/OpenTTD/OpenTTD" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://github.com/msadev/OpenTTD" target="_blank" rel="noopener">Web Port Source</a>
+            <span class="separator">|</span>
+            <a href="https://github.com/OpenTTD/OpenTTD" target="_blank" rel="noopener">Upstream</a>
             <span class="separator">|</span>
             <a href="https://wiki.openttd.org" target="_blank" rel="noopener">Wiki</a>
           </p>
@@ -99,6 +102,14 @@
 
           <h4>Web Port</h4>
           <p>This web port was created by <a href="https://github.com/msadev" target="_blank" rel="noopener">msadev</a>. The WebAssembly port is powered by Emscripten. Multiplayer functionality uses a WebSocket proxy.</p>
+
+          <h4>Privacy (RGPD/GDPR)</h4>
+          <p>No ads, analytics, or third-party trackers are used. Game files, saves, and settings are stored locally in your browser (IndexedDB).</p>
+          <p>Network requests are limited to downloading the web build from this server, optionally connecting to a WebSocket proxy for multiplayer, and fetching release notes from GitHub. Standard server logs may include IP address and user agent for security and troubleshooting.</p>
+          <p>Data controller: the operator of this website. If you self-host, you are the data controller and decide log retention.</p>
+          <p>Legal basis: legitimate interest for service operation and security; consent for any optional features you enable.</p>
+          <p>Your rights: access, rectification, deletion, restriction, and objection. Contact the website operator or open an issue on the web port repository.</p>
+          <p>Privacy policy: please refer to the web port repository or contact the website operator.</p>
 
           <h4>Disclaimer</h4>
           <p>This software is provided "as is" without warranty of any kind. OpenTTD is not affiliated with the original Transport Tycoon games or their publishers.</p>
