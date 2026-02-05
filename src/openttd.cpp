@@ -449,6 +449,69 @@ struct AfterNewGRFScan : NewGRFScanCallback {
 	}
 };
 
+void FinishBootstrapAfterDownload()
+{
+	static bool done = false;
+	if (done) return;
+	done = true;
+
+	/* Now that the download finished, select the graphics set. */
+	BaseGraphics::FindSets();
+	if (!BaseGraphics::SetSet(nullptr)) {
+		UserError("Failed to find a graphics set. Please acquire a graphics set for OpenTTD. See section 1.4 of README.md.");
+		return;
+	}
+
+	/* Re-initialize palette now that graphics are available. */
+	GfxInitPalettes();
+
+	VideoDriver::GetInstance()->ClaimMousePointer();
+
+	BaseSounds::FindSets();
+	std::string sounds_set;
+	if (!BaseSounds::ini_set.empty()) sounds_set = BaseSounds::ini_set;
+	if (!BaseSounds::SetSetByName(sounds_set)) {
+		if (sounds_set.empty() || !BaseSounds::SetSet({})) {
+			UserError("Failed to find a sounds set. Please acquire a sounds set for OpenTTD. See section 1.4 of README.md.");
+		} else {
+			ErrorMessageData msg(GetEncodedString(STR_CONFIG_ERROR), GetEncodedString(STR_CONFIG_ERROR_INVALID_BASE_SOUNDS_NOT_FOUND, sounds_set));
+			ScheduleErrorMessage(msg);
+		}
+	}
+
+	BaseMusic::FindSets();
+	std::string music_set;
+	if (!BaseMusic::ini_set.empty()) music_set = BaseMusic::ini_set;
+	if (!BaseMusic::SetSetByName(music_set)) {
+		if (music_set.empty() || !BaseMusic::SetSet({})) {
+			UserError("Failed to find a music set. Please acquire a music set for OpenTTD. See section 1.4 of README.md.");
+		} else {
+			ErrorMessageData msg(GetEncodedString(STR_CONFIG_ERROR), GetEncodedString(STR_CONFIG_ERROR_INVALID_BASE_MUSIC_NOT_FOUND, music_set));
+			ScheduleErrorMessage(msg);
+		}
+	}
+
+	std::string sounddriver;
+	if (!_ini_sounddriver.empty()) sounddriver = _ini_sounddriver;
+	DriverFactoryBase::SelectDriver(sounddriver, Driver::DT_SOUND);
+
+	std::string musicdriver;
+	if (!_ini_musicdriver.empty()) musicdriver = _ini_musicdriver;
+	DriverFactoryBase::SelectDriver(musicdriver, Driver::DT_MUSIC);
+
+	GenerateWorld(GWM_EMPTY, 64, 64); // Make the viewport initialization happy
+	LoadIntroGame(false);
+
+	/* ScanNewGRFFiles now has control over the scanner. */
+	RequestNewGRFScan(new AfterNewGRFScan());
+
+	MarkWholeScreenDirty();
+
+#ifdef __EMSCRIPTEN__
+	EM_ASM({ if (window["openttd_bootstrap_complete"]) openttd_bootstrap_complete(); });
+#endif
+}
+
 void PostMainLoop()
 {
 	WaitTillSaved();

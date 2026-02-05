@@ -565,6 +565,7 @@ void SetupColoursAndInitialWindow()
 	/* XXX: these are not done */
 	switch (_game_mode) {
 		default: NOT_REACHED();
+		case GM_BOOTSTRAP:
 		case GM_MENU:
 			ShowSelectGameWindow();
 			break;

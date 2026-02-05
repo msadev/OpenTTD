@@ -346,9 +346,8 @@ public:
 
 	void OnDownloadComplete(ContentID) override
 	{
-		/* _exit_game is used to break out of the outer video driver's MainLoop. */
-		_exit_game = true;
-
+		/* Finish startup without reloading the page. */
+		FinishBootstrapAfterDownload();
 		delete this;
 	}
 };

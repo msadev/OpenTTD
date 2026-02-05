@@ -11,10 +11,19 @@
  * @param {Function} [config.onReady]
  * @param {Function} [config.onError]
  * @param {Function} [config.onExit]
+ * @param {Function} [config.onBootstrapComplete]
  * @param {Function} [config.locateFile]
  */
 export function createModule(config) {
-  const { canvas, onProgress, onReady, onError, onExit, locateFile } = config;
+  const {
+    canvas,
+    onProgress,
+    onReady,
+    onError,
+    onExit,
+    onBootstrapComplete,
+    locateFile
+  } = config;
 
   let totalDependencies = 42;
   let doneDependencies = 0;
@@ -76,9 +85,8 @@ export function createModule(config) {
       onError?.(new Error('Failed to download base graphics. Check your internet connection.'));
     },
 
-    onBootstrapReload() {
-      onProgress?.(100, 100, 'Base graphics downloaded. Reloading...');
-      setTimeout(() => location.reload(), 1000);
+    onBootstrapComplete() {
+      onBootstrapComplete?.();
     },
 
     onExit() {
@@ -174,9 +182,9 @@ export function setupGlobalFunctions(Module) {
     Module.onBootstrapFailed?.();
   };
 
-  window.openttd_bootstrap_reload = () => {
+  window.openttd_bootstrap_complete = () => {
     window.openttd_syncfs(() => {
-      Module.onBootstrapReload?.();
+      Module.onBootstrapComplete?.();
     });
   };
 

@@ -34,6 +34,9 @@ const legalClose = document.getElementById('legal-close');
 const legalOk = document.getElementById('legal-ok');
 
 let Module = null;
+let isBootstrapping = false;
+let isModuleReady = false;
+let readyShowTimer = null;
 
 /**
  * Update the loading progress UI
@@ -92,6 +95,7 @@ async function onStartClick() {
 
     // Show progress bar, hide start button
     showProgressBar();
+    showScreen(loadingScreen);
 
     // Initialize audio
     audioManager.init();
@@ -133,15 +137,31 @@ async function initModule() {
       if (status === 'Running' || (current === 0 && total === 0)) {
         return;
       }
+      if (status === 'Downloading base graphics...') {
+        isBootstrapping = true;
+        if (readyShowTimer) {
+          clearTimeout(readyShowTimer);
+          readyShowTimer = null;
+        }
+        showScreen(loadingScreen);
+      }
       updateProgress(current, total, status);
     },
 
     onReady: () => {
       console.log('[OpenTTD] Module ready');
+      isModuleReady = true;
       updateProgress(100, 100, 'Ready!');
 
-      // Show the game canvas
-      showGame();
+      if (!isBootstrapping) {
+        // Small delay to detect a potential bootstrap start
+        readyShowTimer = setTimeout(() => {
+          readyShowTimer = null;
+          if (!isBootstrapping) {
+            showGame();
+          }
+        }, 200);
+      }
     },
 
     onError: (error) => {
@@ -149,9 +169,18 @@ async function initModule() {
       showError('Error', error.message);
     },
 
+    onBootstrapComplete: () => {
+      isBootstrapping = false;
+      if (isModuleReady) {
+        showGame();
+      }
+    },
+
     onExit: () => {
-      // Simply reload the page to restart the game
-      location.reload();
+      // Avoid hard reload; return to start screen instead
+      showScreen(loadingScreen);
+      showStartButton();
+      updateProgress(100, 100, 'Game exited. Click Start to play again.');
     },
 
     locateFile: (path) => {
