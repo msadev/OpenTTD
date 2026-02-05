@@ -8,7 +8,7 @@ import { setupMusicGlobals } from './lib/midi-player.js';
 
 // Configure WebSocket proxy for multiplayer support
 // Change this to your proxy server URL for production
-window.openttd_websocket_proxy = 'ws://localhost:8080';
+window.openttd_websocket_proxy = 'wss://openwebports.org/ports/openttd/proxy';
 
 // WASM assets are served from /static folder via parcel-reporter-static-files-copy
 const openttdJsUrl = '/openttd.js';
