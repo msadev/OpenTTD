@@ -402,6 +402,10 @@ struct AfterNewGRFScan : NewGRFScanCallback {
 		/* We want the new (correct) NewGRF count to survive the loading. */
 		uint last_newgrf_count = _settings_client.gui.last_newgrf_count;
 		LoadFromConfig();
+#ifdef __EMSCRIPTEN__
+		/* Disable automated survey for web builds by default. */
+		_settings_client.network.participate_survey = PS_NO;
+#endif
 		_settings_client.gui.last_newgrf_count = last_newgrf_count;
 		/* Since the default for the palette might have changed due to
 		 * reading the configuration file, recalculate that now. */
@@ -742,6 +746,10 @@ int openttd_main(std::span<std::string_view> arguments)
 #endif
 
 	LoadFromConfig(true);
+#ifdef __EMSCRIPTEN__
+	/* Disable automated survey for web builds by default. */
+	_settings_client.network.participate_survey = PS_NO;
+#endif
 
 	if (resolution.width != 0) _cur_resolution = resolution;
 

@@ -2328,6 +2328,10 @@ void ShowNetworkAskSurvey()
 {
 	/* If we can't send a survey, don't ask the question. */
 	if constexpr (!NetworkSurveyHandler::IsSurveyPossible()) return;
+#ifdef __EMSCRIPTEN__
+	/* Do not prompt for automated survey on web builds. */
+	return;
+#endif
 
 	CloseWindowByClass(WC_NETWORK_ASK_SURVEY);
 
