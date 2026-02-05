@@ -4,12 +4,12 @@
   "description": "OpenTTD Web Port - Transport Tycoon Deluxe clone in your browser",
   "type": "module",
   "scripts": {
-    "dev": "npm run clean && parcel serve src/index.html --port 3000",
-    "build": "parcel build src/index.html --dist-dir dist --public-url ./",
+    "dev": "npm run parcel_clean && parcel serve src/index.html --port 3000",
+    "build": "npm run parcel_clean && parcel build src/index.html --dist-dir dist --public-url ./",
     "build:wasm": "node scripts/build-wasm.js",
-    "build:all": "npm run clean && npm run build:wasm && npm run build",
+    "build:all": "npm run build:wasm && npm run build",
     "preview": "npx serve dist -l 3000",
-    "clean": "rimraf dist .parcel-cache"
+    "parcel_clean": "rimraf dist .parcel-cache"
   },
   "devDependencies": {
     "@parcel/transformer-webmanifest": "^2.16.3",
