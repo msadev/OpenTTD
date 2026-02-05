@@ -11,12 +11,12 @@
  *   node websocket-proxy.js [port]
  *   LOG_LEVEL=debug node websocket-proxy.js [port]
  *
- * Default port: 8080
+ * Default port: 8081
  *
  * Endpoints:
- *   WebSocket: ws://proxy:8080/connect/<host>/<port> - Direct TCP connection
- *   HTTP GET:  http://proxy:8080/servers - Get public server list as JSON
- *   HTTP GET:  http://proxy:8080/health - Health check
+ *   WebSocket: ws://proxy:8081/connect/<host>/<port> - Direct TCP connection
+ *   HTTP GET:  http://proxy:8081/servers - Get public server list as JSON
+ *   HTTP GET:  http://proxy:8081/health - Health check
  */
 
 import { WebSocketServer } from 'ws';
@@ -24,7 +24,7 @@ import { createServer } from 'http';
 import net from 'net';
 import { fetchServerList } from './game-coordinator.js';
 
-const PROXY_PORT = parseInt(process.argv[2]) || 8080;
+const PROXY_PORT = parseInt(process.argv[2]) || 8081;
 
 // Log levels: 'error' (prod), 'info' (default), 'debug' (dev)
 const LOG_LEVEL = process.env.LOG_LEVEL || 'error';
