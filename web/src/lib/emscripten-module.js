@@ -183,9 +183,7 @@ export function setupGlobalFunctions(Module) {
   };
 
   window.openttd_bootstrap_complete = () => {
-    window.openttd_syncfs(() => {
-      Module.onBootstrapComplete?.();
-    });
+    Module.onBootstrapComplete?.();
   };
 
   // openttd_server_list is defined in os/emscripten/pre.js

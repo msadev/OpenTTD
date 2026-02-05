@@ -37,6 +37,7 @@ let Module = null;
 let isBootstrapping = false;
 let isModuleReady = false;
 let readyShowTimer = null;
+let bootstrapKnown = false;
 
 /**
  * Update the loading progress UI
@@ -139,6 +140,7 @@ async function initModule() {
       }
       if (status === 'Downloading base graphics...') {
         isBootstrapping = true;
+        bootstrapKnown = true;
         if (readyShowTimer) {
           clearTimeout(readyShowTimer);
           readyShowTimer = null;
@@ -153,15 +155,17 @@ async function initModule() {
       isModuleReady = true;
       updateProgress(100, 100, 'Ready!');
 
-      if (!isBootstrapping) {
-        // Small delay to detect a potential bootstrap start
-        readyShowTimer = setTimeout(() => {
-          readyShowTimer = null;
-          if (!isBootstrapping) {
-            showGame();
-          }
-        }, 200);
+      // Wait a bit to see if bootstrap starts, to avoid a black flash
+      if (readyShowTimer) {
+        clearTimeout(readyShowTimer);
       }
+      readyShowTimer = setTimeout(() => {
+        readyShowTimer = null;
+        if (!isBootstrapping) {
+          bootstrapKnown = true;
+          showGame();
+        }
+      }, 800);
     },
 
     onError: (error) => {
@@ -171,6 +175,11 @@ async function initModule() {
 
     onBootstrapComplete: () => {
       isBootstrapping = false;
+      bootstrapKnown = true;
+      if (readyShowTimer) {
+        clearTimeout(readyShowTimer);
+        readyShowTimer = null;
+      }
       if (isModuleReady) {
         showGame();
       }
