@@ -10,10 +10,11 @@ import { setupMusicGlobals } from './lib/midi-player.js';
 // Change this to your proxy server URL for production
 window.openttd_websocket_proxy = 'wss://openwebports.org/ports/openttd/proxy';
 
-// WASM assets are served from /static folder via parcel-reporter-static-files-copy
-const openttdJsUrl = '/openttd.js';
-const openttdWasmUrl = '/openttd.wasm';
-const openttdDataUrl = '/openttd.data';
+// WASM assets are served next to index.html (dist root). Use relative paths
+// so it works under sub-paths like /ports/openttd/dist without hardcoding.
+const openttdJsUrl = './openttd.js';
+const openttdWasmUrl = './openttd.wasm';
+const openttdDataUrl = './openttd.data';
 
 // DOM Elements
 const loadingScreen = document.getElementById('loading-screen');
