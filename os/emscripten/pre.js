@@ -44,7 +44,14 @@ Module.preRun.push(function() {
     });
 
     window.openttd_syncfs_shown_warning = false;
+    window.openttd_syncfs_inflight = false;
+    window.openttd_syncfs_pending = null;
     window.openttd_syncfs = function(callback) {
+        if (window.openttd_syncfs_inflight) {
+            window.openttd_syncfs_pending = callback || null;
+            return;
+        }
+        window.openttd_syncfs_inflight = true;
         /* Copy the virtual FS to the persistent storage. */
         FS.syncfs(false, function (err) {
             /* On first time, warn the user about the volatile behaviour of
@@ -54,7 +61,11 @@ Module.preRun.push(function() {
                 Module.onWarningFs();
             }
 
+            window.openttd_syncfs_inflight = false;
+            var pending = window.openttd_syncfs_pending;
+            window.openttd_syncfs_pending = null;
             if (callback) callback();
+            if (pending) window.openttd_syncfs(pending);
         });
     }
 

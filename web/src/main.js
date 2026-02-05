@@ -8,7 +8,7 @@ import { setupMusicGlobals } from './lib/midi-player.js';
 
 // Configure WebSocket proxy for multiplayer support
 // Change this to your proxy server URL for production
-window.openttd_websocket_proxy = 'wss://openwebports.org/ports/openttd/proxy';
+window.openttd_websocket_proxy = 'wss://openwebports.org/proxies/openttd';
 
 // WASM assets are served next to index.html (dist root). Use relative paths
 // so it works under sub-paths like /ports/openttd/dist without hardcoding.
@@ -186,10 +186,8 @@ async function initModule() {
     },
 
     onExit: () => {
-      // Avoid hard reload; return to start screen instead
-      showScreen(loadingScreen);
-      showStartButton();
-      updateProgress(100, 100, 'Game exited. Click Start to play again.');
+      // Reload the page to restart the game
+      location.reload();
     },
 
     locateFile: (path) => {
