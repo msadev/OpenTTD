@@ -497,10 +497,12 @@ html, body {
   }
 }
 
-/* Touch device optimization */
+/* Touch device optimization - hide cursor entirely on touch */
 @media (hover: none) and (pointer: coarse) {
   #canvas {
-    cursor: default !important;
+    cursor: none !important;
+    /* Prevent iOS bounce/zoom on touch gestures */
+    touch-action: none;
   }
 }
 

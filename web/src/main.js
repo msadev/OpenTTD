@@ -5,6 +5,7 @@
 import { createModule, initFileSystem, setupWebSocket, setupGlobalFunctions, patchSocketFS } from './lib/emscripten-module.js';
 import { audioManager } from './lib/audio-manager.js';
 import { setupMusicGlobals } from './lib/midi-player.js';
+import { initTouchHandler } from './lib/touch-handler.js';
 
 // Configure WebSocket proxy for multiplayer support
 // Change this to your proxy server URL for production
@@ -122,6 +123,10 @@ function showGame() {
   // Hide screens, show canvas
   showScreen(null);
   canvas.focus();
+
+  // Initialize touch/mobile controls
+  initTouchHandler(canvas, Module);
+
   console.log('[OpenTTD] Game started');
 }
 

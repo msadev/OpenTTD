@@ -1,7 +1,7 @@
 {
   "name": "openttd-web",
   "version": "1.0.0",
-  "description": "OpenTTD Web Port - Transport Tycoon Deluxe clone in your browser",
+  "description": "OpenTTD Web Port",
   "type": "module",
   "scripts": {
     "dev": "npm run parcel_clean && parcel serve src/index.html --port 3000",

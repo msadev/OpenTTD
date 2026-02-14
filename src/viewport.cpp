@@ -3836,3 +3836,33 @@ void ViewportData::CancelFollow(const Window &viewport_window)
 
 	this->follow_vehicle = VehicleID::Invalid();
 }
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include "gfx_func.h"
+
+extern "C" {
+
+/**
+ * Check if a placement/construction tool is currently active.
+ * Used by the web touch handler to decide whether single-finger
+ * drag should pan the camera or interact with the tool.
+ * @return 1 if a placement tool is active, 0 otherwise.
+ */
+int CDECL em_openttd_is_placing()
+{
+	return (_thd.place_mode & HT_DRAG_MASK) != HT_NONE ? 1 : 0;
+}
+
+/**
+ * Set cursor visibility for touch devices.
+ * @param visible 1 to show cursor, 0 to hide it.
+ */
+void CDECL em_openttd_set_cursor_visible(int visible)
+{
+	_cursor.in_window = (visible != 0);
+	if (!visible) UndrawMouseCursor();
+}
+
+} // extern "C"
+#endif /* __EMSCRIPTEN__ */

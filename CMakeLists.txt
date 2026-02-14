@@ -366,7 +366,7 @@ if(EMSCRIPTEN)
     add_definitions(-s DISABLE_EXCEPTION_CATCHING=0)
 
     # Export functions to Javascript.
-    target_link_libraries(WASM::WASM INTERFACE "-s EXPORTED_FUNCTIONS='[\"_main\", \"_em_openttd_add_server\", \"_em_openttd_add_server_with_info\"]' -s EXPORTED_RUNTIME_METHODS='[\"cwrap\"]'")
+    target_link_libraries(WASM::WASM INTERFACE "-s EXPORTED_FUNCTIONS='[\"_main\", \"_em_openttd_add_server\", \"_em_openttd_add_server_with_info\", \"_em_openttd_is_placing\", \"_em_openttd_set_cursor_visible\"]' -s EXPORTED_RUNTIME_METHODS='[\"cwrap\"]'")
 
     # Preload all the files we generate during build.
     # Note: Languages requiring special fonts (Chinese, Japanese, Korean, etc.) may not
