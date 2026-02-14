@@ -115,7 +115,6 @@ html, body {
     -1px -1px 0px var(--color-orange-light);
   margin-bottom: 0.25rem;
   letter-spacing: 4px;
-  text-transform: uppercase;
 }
 
 .logo .subtitle {
